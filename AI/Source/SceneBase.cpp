@@ -146,7 +146,7 @@ void SceneBase::Init()
 	//week 7
 	meshList[GEO_WHITEQUAD] = MeshBuilder::GenerateQuad("whitequad", Color(1, 1, 1));
 	meshList[GEO_WALL] = MeshBuilder::GenerateQuad("wall", Color(1, 1, 1));
-	meshList[GEO_WALL]->textureID = LoadTGA("Image//wall.tga");
+	meshList[GEO_WALL]->textureID = LoadTGA("Image//dirtwall.tga");
 	meshList[GEO_FLOOR] = MeshBuilder::GenerateQuad("floor", Color(1, 1, 1));
 	meshList[GEO_FLOOR]->textureID = LoadTGA("Image//floor.tga");
 	meshList[GEO_AGENT] = MeshBuilder::GenerateQuad("agent", Color(1, 1, 1));
@@ -181,22 +181,24 @@ void SceneBase::Init()
 	meshList[GEO_SPEEDY_ANT_WORKER]->textureID = LoadTGA("Image//speedyAntworker.tga");
 	meshList[GEO_SPEEDY_ANT_SOLDIER] = MeshBuilder::GenerateQuad("speedyAntsoldier", Color(1, 0, 0));
 	meshList[GEO_SPEEDY_ANT_SOLDIER]->textureID = LoadTGA("Image//speedyAntsoldier.tga");
-	meshList[GEO_SPEEDY_ANT_QUEEN] = MeshBuilder::GenerateQuad("speedyAntqueen", Color(0, 1, 0));
+	meshList[GEO_SPEEDY_ANT_QUEEN] = MeshBuilder::GenerateQuad("speedyAntqueen", Color(1, 1, 1));
 	meshList[GEO_SPEEDY_ANT_QUEEN]->textureID = LoadTGA("Image//speedyAntqueen.tga");
 	meshList[GEO_STRONG_ANT_WORKER] = MeshBuilder::GenerateQuad("strongAntworker", Color(0.5f, 0.5f, 0.5f));
 	meshList[GEO_STRONG_ANT_WORKER]->textureID = LoadTGA("Image//strongAntworker.tga");
 	meshList[GEO_STRONG_ANT_SOLDIER] = MeshBuilder::GenerateQuad("strongAntwarrior", Color(1, 0, 0));
 	meshList[GEO_STRONG_ANT_SOLDIER]->textureID = LoadTGA("Image//strongAntwarrior.tga");
-	meshList[GEO_STRONG_ANT_QUEEN] = MeshBuilder::GenerateQuad("strongAntqueen", Color(0, 1, 0));
+	meshList[GEO_STRONG_ANT_QUEEN] = MeshBuilder::GenerateQuad("strongAntqueen", Color(1, 1, 1));
 	meshList[GEO_STRONG_ANT_QUEEN]->textureID = LoadTGA("Image//strongAntqueen.tga");
 	meshList[GEO_FOOD] = MeshBuilder::GenerateQuad("food", Color(0, 0, 0.5f));
 	meshList[GEO_FOOD]->textureID = LoadTGA("Image//food.tga");
 	meshList[GEO_NEST] = MeshBuilder::GenerateQuad("nest", Color(1, 0, 1));
 	meshList[GEO_NEST]->textureID = LoadTGA("Image//nest.tga");
-	meshList[GEO_GRASS] = MeshBuilder::GenerateQuad("grass", Color(0.2f, 0.1f, 0.2f));
+	meshList[GEO_GRASS] = MeshBuilder::GenerateQuad("grass", Color(0.2f, 0.7f, 0.2f));
 	meshList[GEO_GRASS]->textureID = LoadTGA("Image//grass.tga");
 	meshList[GEO_SANDBOXBG] = MeshBuilder::GenerateQuad("sandboxbg", Color(0.76f, 0.7f, 0.5f));
 	meshList[GEO_SANDBOXBG]->textureID = LoadTGA("Image//sandboxbg.tga");
+	meshList[GEO_TERRITORYBLUE] = MeshBuilder::GenerateQuad("territoryblue", Color(0.2f, 0.2f, 0.7f));
+	meshList[GEO_TERRITORYRED] = MeshBuilder::GenerateQuad("territoryred", Color(0.7f, 0.2f, 0.2f));
 
 	bLightEnabled = false;
 }

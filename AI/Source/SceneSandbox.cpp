@@ -228,7 +228,7 @@ void SceneSandbox::SpawnUnit(MessageSpawnUnit::UNIT_TYPE unitType, Vector3 posit
 		unit = FetchGO(GameObject::GO_SPEEDY_ANT_WORKER);
 		unit->teamID = 0;
 		unit->homeBase = m_speedyAntQueen->pos;
-		unit->maxHealth = 5.f; unit->health = 5.f; unit->attackPower = 0.2f; unit->moveSpeed = 6.f;
+		unit->maxHealth = 5.f; unit->health = 5.f; unit->attackPower = 0.2f; unit->moveSpeed = 6.f; unit->baseSpeed = 6.f;
 		unit->detectionRange = m_gridSize * 7.f; unit->attackRange = m_gridSize * 0.8f;
 
 		unit->sm = new StateMachine();
@@ -244,7 +244,7 @@ void SceneSandbox::SpawnUnit(MessageSpawnUnit::UNIT_TYPE unitType, Vector3 posit
 		unit = FetchGO(GameObject::GO_SPEEDY_ANT_SOLDIER);
 		unit->teamID = 0;
 		unit->homeBase = m_speedyAntQueen->pos;
-		unit->maxHealth = 10.f; unit->health = 10.f; unit->attackPower = 1.5f; unit->moveSpeed = 4.f;
+		unit->maxHealth = 10.f; unit->health = 10.f; unit->attackPower = 1.5f; unit->moveSpeed = 4.f; unit->baseSpeed = 4.f;
 		unit->detectionRange = m_gridSize * 9.f; unit->attackRange = m_gridSize * 1.2f;
 
 		unit->sm = new StateMachine();
@@ -260,7 +260,7 @@ void SceneSandbox::SpawnUnit(MessageSpawnUnit::UNIT_TYPE unitType, Vector3 posit
 		unit = FetchGO(GameObject::GO_STRONG_ANT_WORKER);
 		unit->teamID = 1;
 		unit->homeBase = m_strongAntQueen->pos;
-		unit->maxHealth = 15.f; unit->health = 15.f; unit->attackPower = 1.0f; unit->moveSpeed = 3.0f;
+		unit->maxHealth = 15.f; unit->health = 15.f; unit->attackPower = 1.0f; unit->moveSpeed = 3.0f; unit->baseSpeed = 3.f;
 		unit->detectionRange = m_gridSize * 5.f; unit->attackRange = m_gridSize * 0.7f;
 
 		unit->sm = new StateMachine();
@@ -276,7 +276,7 @@ void SceneSandbox::SpawnUnit(MessageSpawnUnit::UNIT_TYPE unitType, Vector3 posit
 		unit = FetchGO(GameObject::GO_STRONG_ANT_SOLDIER);
 		unit->teamID = 1;
 		unit->homeBase = m_strongAntQueen->pos;
-		unit->maxHealth = 30.f; unit->health = 30.f; unit->attackPower = 5.0f; unit->moveSpeed = 2.0f;
+		unit->maxHealth = 30.f; unit->health = 30.f; unit->attackPower = 5.0f; unit->moveSpeed = 2.0f; unit->baseSpeed = 2.f;
 		unit->detectionRange = m_gridSize * 6.f; unit->attackRange = m_gridSize * 1.3f;
 
 		unit->sm = new StateMachine();
@@ -819,6 +819,7 @@ void SceneSandbox::Render()
 	RenderMesh(meshList[GEO_GRASS], false);
 	modelStack.PopMatrix();
 
+	//walls
 	for (int row = 0; row < m_noGrid; ++row)
 	{
 		for (int col = 0; col < m_noGrid; ++col)
@@ -833,16 +834,19 @@ void SceneSandbox::Render()
 			}
 		}
 	}
-
+	meshList[GEO_WHITEQUAD]->material.kAmbient.Set(0.5f, 0.5f, 0.5f);
 	// Render grid lines (light)
 	for (int i = 0; i <= m_noGrid; ++i)
 	{
+		// Vertical Lines
 		modelStack.PushMatrix();
 		modelStack.Translate(i * m_gridSize, m_worldHeight * 0.5f, -0.5f);
 		modelStack.Scale(0.05f, m_worldHeight, 1.f);
 		RenderMesh(meshList[GEO_WHITEQUAD], true);
 		modelStack.PopMatrix();
 
+		// Horizontal Lines
+		// FIXED: Scale based on m_worldHeight (not Width) to keep it a perfect square
 		modelStack.PushMatrix();
 		modelStack.Translate(m_worldHeight * 0.5f, i * m_gridSize, -0.5f);
 		modelStack.Scale(m_worldHeight, 0.05f, 1.f);
@@ -851,19 +855,88 @@ void SceneSandbox::Render()
 	}
 
 	// Render territory markers
-	// Speedy Ant territory (bottom-left) - red tint
+	float territorySize = m_gridSize * 8.f;
+
+	// Speedy Ant Territory (Bottom-Left: 0 to 8)
+	// Center = 4.0 * gridSize
+	meshList[GEO_WHITEQUAD]->material.kAmbient.Set(0.8f, 0.2f, 0.2f); // RED
 	modelStack.PushMatrix();
-	modelStack.Translate(m_gridSize * (m_noGrid * 0.25f), m_gridSize * (m_noGrid * 0.25f), -0.8f);
-	modelStack.Scale(m_gridSize * m_noGrid * 0.5f, m_gridSize * m_noGrid * 0.5f, 1.f);
-	RenderMesh(meshList[GEO_WHITEQUAD], true);
+	modelStack.Translate(m_gridSize * 4.0f, m_gridSize * 4.0f, -0.8f);
+	modelStack.Scale(territorySize, territorySize, 1.f);
+	RenderMesh(meshList[GEO_TERRITORYRED], true);
 	modelStack.PopMatrix();
 
-	// Strong Ants territory (top-right) - blue tint
+	// Strong Ant Territory (Top-Right: 22 to 30)
+	// Center = 26.0 * gridSize
+	meshList[GEO_WHITEQUAD]->material.kAmbient.Set(0.2f, 0.2f, 0.8f); // BLUE
 	modelStack.PushMatrix();
-	modelStack.Translate(m_gridSize * (m_noGrid * 0.75f), m_gridSize * (m_noGrid * 0.75f), -0.8f);
-	modelStack.Scale(m_gridSize * m_noGrid * 0.5f, m_gridSize * m_noGrid * 0.5f, 1.f);
-	RenderMesh(meshList[GEO_WHITEQUAD], true);
+	modelStack.Translate(m_gridSize * 26.0f, m_gridSize * 26.0f, -0.8f);
+	modelStack.Scale(territorySize, territorySize, 1.f);
+	RenderMesh(meshList[GEO_TERRITORYBLUE], true);
 	modelStack.PopMatrix();
+
+	// Reset to White for other objects using this mesh
+	meshList[GEO_WHITEQUAD]->material.kAmbient.Set(1.f, 1.f, 1.f);
+
+	// --- NEW: STACKING LOGIC ---
+	// Map: CellIndex -> GameObjectType -> Count
+	std::map<int, std::map<int, int>> cellCounts;
+
+	// Pass 1: Count objects per cell
+	for (auto go : m_goList)
+	{
+		if (!go->active) continue;
+		int gx = (int)(go->pos.x / m_gridSize);
+		int gy = (int)(go->pos.y / m_gridSize);
+		// Safety clamp
+		if (gx < 0) gx = 0; if (gx >= m_noGrid) gx = m_noGrid - 1;
+		if (gy < 0) gy = 0; if (gy >= m_noGrid) gy = m_noGrid - 1;
+
+		int idx = gy * m_noGrid + gx;
+		cellCounts[idx][go->type]++;
+	}
+
+	// Pass 2: Render unique objects with counts
+	for (std::vector<GameObject*>::iterator it = m_goList.begin(); it != m_goList.end(); ++it)
+	{
+		GameObject* go = (GameObject*)*it;
+		if (go->active)
+		{
+			int gx = (int)(go->pos.x / m_gridSize);
+			int gy = (int)(go->pos.y / m_gridSize);
+			if (gx < 0) gx = 0; if (gx >= m_noGrid) gx = m_noGrid - 1;
+			if (gy < 0) gy = 0; if (gy >= m_noGrid) gy = m_noGrid - 1;
+			int idx = gy * m_noGrid + gx;
+
+			// Check the count for this specific type in this cell
+			int count = cellCounts[idx][go->type];
+
+			// If count > 0, it means we haven't rendered this type for this cell yet
+			if (count > 0)
+			{
+				RenderGO(go);
+
+				// If there is more than 1, draw the count text
+				if (count > 1)
+				{
+					std::ostringstream ss;
+					ss << count; // e.g. "3"
+
+					modelStack.PushMatrix();
+					// Position text slightly offset from the unit center (top-right)
+					modelStack.Translate(go->pos.x + m_gridSize * 0.2f, go->pos.y + m_gridSize * 0.2f, 0.2f);
+					// Scale text appropriate to grid size
+					modelStack.Scale(m_gridSize, m_gridSize, 1.f);
+					RenderText(meshList[GEO_TEXT], ss.str(), Color(1, 1, 1)); // White text
+					modelStack.PopMatrix();
+				}
+
+				// Set count to 0 so we don't render this type for this cell again this frame
+				cellCounts[idx][go->type] = 0;
+			}
+			// If count was 0, we skip RenderGO (this unit is "hidden" inside the stack)
+		}
+	}
 
 	// Render all game objects
 	for (std::vector<GameObject*>::iterator it = m_goList.begin(); it != m_goList.end(); ++it)
@@ -878,60 +951,65 @@ void SceneSandbox::Render()
 	// On screen text
 	std::ostringstream ss;
 	ss.precision(3);
+
+	// Stats Column
+	float colX = 60.f;
+
+	ss.str("");
 	ss << "Speed: " << m_speed;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0, 1, 0), 2.5f, 2, 57);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0, 1, 0), 2.5f, colX, 57);
 
 	ss.str("");
 	ss.precision(5);
 	ss << "FPS: " << fps;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0, 1, 0), 2.5f, 2, 54);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0, 1, 0), 2.5f, colX, 54);
 
 	ss.str("");
 	ss << std::fixed << std::setprecision(1);
 	ss << "Time: " << m_simulationTime << "s / 300s";
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 1, 0), 2.5f, 2, 51);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 1, 0), 2.5f, colX, 51);
 
 	// Speedy Ant Colony Stats
 	ss.str("");
 	ss << "=== SPEEDY ANTS COLONY ===";
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.3f, 0.3f), 2.5f, 2, 46);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.3f, 0.3f), 2.5f, colX, 46);
 
 	ss.str("");
 	ss << "Workers: " << m_speedyAntWorkerCount;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.5f, 0.5f), 2.5f, 2, 43);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.5f, 0.5f), 2.5f, colX, 43);
 
 	ss.str("");
 	ss << "Soldiers: " << m_speedyAntSoldierCount;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.5f, 0.5f), 2.5f, 2, 40);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.5f, 0.5f), 2.5f, colX, 40);
 
 	ss.str("");
 	ss << "Resources: " << m_speedyAntResources;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.5f, 0.5f), 2.5f, 2, 37);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.5f, 0.5f), 2.5f, colX, 37);
 
 	ss.str("");
 	ss << "Queen HP: " << (m_speedyAntQueen->active ? static_cast<int>(m_speedyAntQueen->health) : 0);
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.5f, 0.5f), 2.5f, 2, 34);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.5f, 0.5f), 2.5f, colX, 34);
 
 	// Strong Ant colony Stats
 	ss.str("");
 	ss << "=== STRONG ANTS COLONY ===";
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.3f, 0.3f, 1), 2.5f, 2, 28);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.3f, 0.3f, 1), 2.5f, colX, 28);
 
 	ss.str("");
 	ss << "Workers: " << m_strongAntWorkerCount;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.5f, 0.5f, 1), 2.5f, 2, 25);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.5f, 0.5f, 1), 2.5f, colX, 25);
 
 	ss.str("");
 	ss << "Soldiers: " << m_strongAntWarriorCount;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.5f, 0.5f, 1), 2.5f, 2, 22);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.5f, 0.5f, 1), 2.5f, colX, 22);
 
 	ss.str("");
 	ss << "Resources: " << m_strongAntResources;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.5f, 0.5f, 1), 2.5f, 2, 19);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.5f, 0.5f, 1), 2.5f, colX, 19);
 
 	ss.str("");
 	ss << "Queen HP: " << (m_strongAntQueen->active ? static_cast<int>(m_strongAntQueen->health) : 0);
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.5f, 0.5f, 1), 2.5f, 2, 16);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.5f, 0.5f, 1), 2.5f, colX, 16);
 
 	// Win condition
 	if (m_simulationEnded)

@@ -27,7 +27,7 @@ void StateWorkerIdle::Exit() {}
 
 StateWorkerSearching::StateWorkerSearching(const std::string& stateID, GameObject* go) : State(stateID), m_go(go) {}
 StateWorkerSearching::~StateWorkerSearching() {}
-void StateWorkerSearching::Enter() { m_go->moveSpeed = 3.f; m_go->targetResource.SetZero(); }
+void StateWorkerSearching::Enter() { m_go->moveSpeed = m_go->baseSpeed; m_go->targetResource.SetZero(); }
 void StateWorkerSearching::Update(double dt) {
 	if (m_go->targetResource.IsZero()) {
 		if ((m_go->pos - m_go->target).LengthSquared() < 0.1f) {
@@ -41,7 +41,7 @@ void StateWorkerSearching::Exit() {}
 
 StateWorkerGathering::StateWorkerGathering(const std::string& stateID, GameObject* go) : State(stateID), m_go(go) {}
 StateWorkerGathering::~StateWorkerGathering() {}
-void StateWorkerGathering::Enter() { m_go->moveSpeed = 2.f; m_go->gatherTimer = 0.f; m_go->isCarryingResource = false; }
+void StateWorkerGathering::Enter() { m_go->moveSpeed = m_go->baseSpeed * 0.66f; m_go->gatherTimer = 0.f; m_go->isCarryingResource = false; }
 void StateWorkerGathering::Update(double dt) {
 	if (m_go->targetEnemy != nullptr) { m_go->sm->SetNextState("Fleeing"); return; }
 	float gridSize = SceneData::GetInstance()->GetGridSize();
@@ -74,7 +74,7 @@ void StateWorkerGathering::Exit() {}
 
 StateWorkerFleeing::StateWorkerFleeing(const std::string& stateID, GameObject* go) : State(stateID), m_go(go) {}
 StateWorkerFleeing::~StateWorkerFleeing() {}
-void StateWorkerFleeing::Enter() { m_go->moveSpeed = 5.f; PostOffice::GetInstance()->Send("Scene", new MessageRequestHelp(m_go, m_go->pos, m_go->teamID)); }
+void StateWorkerFleeing::Enter() { m_go->moveSpeed = m_go->baseSpeed * 1.5f; PostOffice::GetInstance()->Send("Scene", new MessageRequestHelp(m_go, m_go->pos, m_go->teamID)); }
 void StateWorkerFleeing::Update(double dt) {
 	if (m_go->targetEnemy && m_go->targetEnemy->active) {
 		Vector3 dir = m_go->pos - m_go->targetEnemy->pos;
@@ -89,7 +89,7 @@ void StateWorkerFleeing::Exit() {}
 // ================= SOLDIER STATES =================
 StateSoldierPatrolling::StateSoldierPatrolling(const std::string& stateID, GameObject* go) : State(stateID), m_go(go), patrolTimer(0.f) {}
 StateSoldierPatrolling::~StateSoldierPatrolling() {}
-void StateSoldierPatrolling::Enter() { m_go->moveSpeed = 4.f; patrolTimer = 0.f; patrolTarget.SetZero(); }
+void StateSoldierPatrolling::Enter() { m_go->moveSpeed = m_go->baseSpeed; patrolTimer = 0.f; patrolTarget.SetZero(); }
 void StateSoldierPatrolling::Update(double dt) {
 	patrolTimer += (float)dt;
 	if (m_go->targetEnemy && m_go->targetEnemy->active) { PostOffice::GetInstance()->Send("Scene", new MessageEnemySpotted(m_go, m_go->targetEnemy, m_go->teamID)); m_go->sm->SetNextState("Attacking"); return; }
@@ -101,7 +101,7 @@ void StateSoldierPatrolling::Exit() {}
 
 StateSoldierAttacking::StateSoldierAttacking(const std::string& stateID, GameObject* go) : State(stateID), m_go(go), attackCooldown(0.f) {}
 StateSoldierAttacking::~StateSoldierAttacking() {}
-void StateSoldierAttacking::Enter() { m_go->moveSpeed = 5.f; attackCooldown = 0.f; }
+void StateSoldierAttacking::Enter() { m_go->moveSpeed = m_go->baseSpeed; attackCooldown = 0.f; }
 void StateSoldierAttacking::Update(double dt) {
 	attackCooldown += (float)dt;
 	if (!m_go->targetEnemy || !m_go->targetEnemy->active) { m_go->targetEnemy = nullptr; m_go->sm->SetNextState("Resting"); return; }
@@ -121,7 +121,7 @@ void StateSoldierAttacking::Exit() {}
 
 StateSoldierResting::StateSoldierResting(const std::string& stateID, GameObject* go) : State(stateID), m_go(go), restTimer(0.f) {}
 StateSoldierResting::~StateSoldierResting() {}
-void StateSoldierResting::Enter() { m_go->moveSpeed = 4.f; m_go->target = m_go->homeBase; restTimer = 0.f; }
+void StateSoldierResting::Enter() { m_go->moveSpeed = m_go->baseSpeed; m_go->target = m_go->homeBase; restTimer = 0.f; }
 void StateSoldierResting::Update(double dt) {
 	restTimer += (float)dt;
 	if ((m_go->pos - m_go->homeBase).LengthSquared() > 1.f) m_go->target = m_go->homeBase;

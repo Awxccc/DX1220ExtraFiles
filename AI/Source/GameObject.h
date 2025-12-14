@@ -81,6 +81,7 @@ struct GameObject : public ObjectBase
 	int steps;
 	float energy;
 	float moveSpeed;
+	float baseSpeed;
 	float countDown;
 	STATE currState;
 	GameObject *nearest;
