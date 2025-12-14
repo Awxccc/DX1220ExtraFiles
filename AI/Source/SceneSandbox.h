@@ -41,6 +41,8 @@ protected:
 	float m_gridSize;
 	float m_gridOffset;
 
+	std::vector<bool> m_wallGrid;
+
 	// Team statistics
 	int m_speedyAntWorkerCount;
 	int m_speedyAntSoldierCount;

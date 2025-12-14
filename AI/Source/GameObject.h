@@ -119,7 +119,7 @@ struct GameObject : public ObjectBase
 	bool Handle(Message* message);
 
 	//Assignment 1
-	int teamID; // 0 = speedy Ant Colony, 1 = Strong ant hive
+	int teamID; // 0 = speedy Ant Colony, 1 = Strong Ant Colony
 	float attackPower;
 	float maxHealth;
 	float health;

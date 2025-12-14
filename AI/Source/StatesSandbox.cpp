@@ -631,7 +631,7 @@ void StateStrongAntSoldierHunting::Update(double dt)
 	{
 		float gridSize = SceneData::GetInstance()->GetGridSize();
 		int gridNum = SceneData::GetInstance()->GetNumGrid();
-		// Patrol towards lower-left (ant territory)
+		// Patrol towards lower-left (speedy ants territory)
 		huntTarget.Set(
 			Math::RandIntMinMax(0, gridNum / 2) * gridSize + gridSize * 0.5f,
 			Math::RandIntMinMax(0, gridNum / 2) * gridSize + gridSize * 0.5f,

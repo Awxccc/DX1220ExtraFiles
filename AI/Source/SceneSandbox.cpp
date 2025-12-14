@@ -12,7 +12,7 @@ SceneSandbox::SceneSandbox()
 	m_noGrid{}, m_gridSize{}, m_gridOffset{}, m_speedyAntWorkerCount{}, m_speedyAntSoldierCount{},
 	m_strongAntWorkerCount{}, m_strongAntWarriorCount{}, m_speedyAntResources{}, m_strongAntResources{},
 	m_speedyAntQueen{}, m_strongAntQueen{}, m_foodLocations{}, m_simulationTime{},
-	m_simulationEnded{}, m_winner{}, m_updateTimer{}, m_updateCycle{}
+	m_simulationEnded{}, m_winner{}, m_updateTimer{}, m_updateCycle{}, m_wallGrid{}
 {
 }
 
@@ -38,6 +38,38 @@ void SceneSandbox::Init()
 	m_noGrid = 30;
 	m_gridSize = m_worldHeight / m_noGrid;
 	m_gridOffset = m_gridSize / 2;
+
+	m_wallGrid.assign(m_noGrid * m_noGrid, false);
+
+	// 1. Walls around Speedy Ant Colony
+	for (int y = 0; y <= 7; ++y)
+	{
+		// Leave gap at y=3 and y=4 for entry/exit
+		if (y != 3 && y != 4)
+			m_wallGrid[Get1DIndex(7, y)] = true;
+	}
+	// Horizontal Wall at y=7
+	for (int x = 0; x <= 7; ++x)
+	{
+		// Leave gap at x=3 and x=4
+		if (x != 3 && x != 4)
+			m_wallGrid[Get1DIndex(x, 7)] = true;
+	}
+
+	// 2. Walls around Strong Ant Colony
+	for (int y = 22; y < m_noGrid; ++y)
+	{
+		// Leave gap at y=26 and y=27
+		if (y != 26 && y != 27)
+			m_wallGrid[Get1DIndex(22, y)] = true;
+	}
+	// Horizontal Wall at y=22
+	for (int x = 22; x < m_noGrid; ++x)
+	{
+		// Leave gap at x=26 and x=27
+		if (x != 26 && x != 27)
+			m_wallGrid[Get1DIndex(x, 22)] = true;
+	}
 
 	SceneData::GetInstance()->SetObjectCount(0);
 	SceneData::GetInstance()->SetFishCount(0);
@@ -90,12 +122,12 @@ void SceneSandbox::Init()
 	// Spawn initial workers for both teams
 	for (int i = 0; i < 3; ++i)
 	{
-		// Ant workers
+		// Speedy Ant workers
 		SpawnUnit(MessageSpawnUnit::UNIT_SPEEDY_ANT_WORKER,
 			m_speedyAntQueen->pos + Vector3(Math::RandFloatMinMax(-2, 2) * m_gridSize,
 				Math::RandFloatMinMax(-2, 2) * m_gridSize, 0), 0);
 
-		// Beetle workers
+		// Strong workers
 		SpawnUnit(MessageSpawnUnit::UNIT_STRONG_ANT_WORKER,
 			m_strongAntQueen->pos + Vector3(Math::RandFloatMinMax(-2, 2) * m_gridSize,
 				Math::RandFloatMinMax(-2, 2) * m_gridSize, 0), 1);
@@ -133,6 +165,12 @@ void SceneSandbox::Init()
 			// Random scattered food
 			x = Math::RandFloatMinMax(2, m_noGrid - 2) * m_gridSize;
 			y = Math::RandFloatMinMax(2, m_noGrid - 2) * m_gridSize;
+		}
+		int gx = (int)(x / m_gridSize);
+		int gy = (int)(y / m_gridSize);
+		if (IsWithinBoundary(gx) && IsWithinBoundary(gy) && m_wallGrid[Get1DIndex(gx, gy)])
+		{
+			x += m_gridSize;
 		}
 
 		food->pos.Set(x, y, 0);
@@ -381,7 +419,6 @@ void SceneSandbox::Update(double dt)
 		int gridX = static_cast<int>((go->pos.x - m_gridOffset + m_gridSize * 0.5f) / m_gridSize);
 		int gridY = static_cast<int>((go->pos.y - m_gridOffset + m_gridSize * 0.5f) / m_gridSize);
 
-		// Clamp index
 		gridX = Math::Clamp(gridX, 0, m_noGrid - 1);
 		gridY = Math::Clamp(gridY, 0, m_noGrid - 1);
 
@@ -405,12 +442,50 @@ void SceneSandbox::Update(double dt)
 			}
 			else
 			{
-				// Pick next tile (Manhattan Movement)
+				// Manhattan Movement with Collision Avoidance
 				Vector3 moveDir(0, 0, 0);
-				if (abs(toTarget.x) >= abs(toTarget.y))
-					moveDir.x = (toTarget.x > 0) ? 1.f : -1.f;
+				int nextX = gridX;
+				int nextY = gridY;
+
+				bool preferX = (abs(toTarget.x) >= abs(toTarget.y));
+
+				// Attempt Preferred Direction
+				if (preferX) nextX += (toTarget.x > 0) ? 1 : -1;
+				else nextY += (toTarget.y > 0) ? 1 : -1;
+
+				bool blocked = false;
+				if (IsWithinBoundary(nextX) && IsWithinBoundary(nextY))
+				{
+					if (m_wallGrid[Get1DIndex(nextX, nextY)]) blocked = true;
+				}
+				else blocked = true; // blocked by boundary (or stay in bounds)
+
+				if (blocked)
+				{
+					// Try the alternate axis (Slide along wall)
+					nextX = gridX;
+					nextY = gridY;
+					if (!preferX) nextX += (toTarget.x > 0) ? 1 : -1; // Switch to X
+					else nextY += (toTarget.y > 0) ? 1 : -1; // Switch to Y
+
+					if (IsWithinBoundary(nextX) && IsWithinBoundary(nextY) &&
+						!m_wallGrid[Get1DIndex(nextX, nextY)])
+					{
+						// Alternate is free
+						if (!preferX) moveDir.x = (toTarget.x > 0) ? 1.f : -1.f;
+						else moveDir.y = (toTarget.y > 0) ? 1.f : -1.f;
+					}
+					else
+					{
+						// Both blocked: Stand still (moveDir remains 0)
+					}
+				}
 				else
-					moveDir.y = (toTarget.y > 0) ? 1.f : -1.f;
+				{
+					// Preferred is free
+					if (preferX) moveDir.x = (toTarget.x > 0) ? 1.f : -1.f;
+					else moveDir.y = (toTarget.y > 0) ? 1.f : -1.f;
+				}
 
 				go->pos += moveDir * moveStep;
 			}
@@ -562,7 +637,7 @@ bool SceneSandbox::IsInTerritory(Vector3 pos, int teamID) const
 	{
 		return pos.x < halfGrid * m_gridSize && pos.y < halfGrid * m_gridSize;
 	}
-	else if (teamID == 1) // Strong ant territory (top-right)
+	else if (teamID == 1) // Strong Ant territory (top-right)
 	{
 		return pos.x > halfGrid * m_gridSize && pos.y > halfGrid * m_gridSize;
 	}
@@ -786,38 +861,49 @@ void SceneSandbox::Render()
 	RenderMesh(meshList[GEO_GRASS], false);
 	modelStack.PopMatrix();
 
+	for (int row = 0; row < m_noGrid; ++row)
+	{
+		for (int col = 0; col < m_noGrid; ++col)
+		{
+			if (m_wallGrid[Get1DIndex(col, row)])
+			{
+				modelStack.PushMatrix();
+				modelStack.Translate(col * m_gridSize + m_gridOffset, row * m_gridSize + m_gridOffset, 0.1f);
+				modelStack.Scale(m_gridSize, m_gridSize, 1.f);
+				RenderMesh(meshList[GEO_WALL], true);
+				modelStack.PopMatrix();
+			}
+		}
+	}
+
 	// Render grid lines (light)
 	for (int i = 0; i <= m_noGrid; ++i)
 	{
 		modelStack.PushMatrix();
 		modelStack.Translate(i * m_gridSize, m_worldHeight * 0.5f, -0.5f);
 		modelStack.Scale(0.05f, m_worldHeight, 1.f);
-		meshList[GEO_WHITEQUAD]->material.kAmbient.Set(0.7f, 0.7f, 0.7f);
 		RenderMesh(meshList[GEO_WHITEQUAD], true);
 		modelStack.PopMatrix();
 
 		modelStack.PushMatrix();
 		modelStack.Translate(m_worldHeight * 0.5f, i * m_gridSize, -0.5f);
 		modelStack.Scale(m_worldHeight, 0.05f, 1.f);
-		meshList[GEO_WHITEQUAD]->material.kAmbient.Set(0.7f, 0.7f, 0.7f);
 		RenderMesh(meshList[GEO_WHITEQUAD], true);
 		modelStack.PopMatrix();
 	}
 
 	// Render territory markers
-	// Ant territory (bottom-left) - red tint
+	// Speedy Ant territory (bottom-left) - red tint
 	modelStack.PushMatrix();
 	modelStack.Translate(m_gridSize * (m_noGrid * 0.25f), m_gridSize * (m_noGrid * 0.25f), -0.8f);
 	modelStack.Scale(m_gridSize * m_noGrid * 0.5f, m_gridSize * m_noGrid * 0.5f, 1.f);
-	meshList[GEO_WHITEQUAD]->material.kAmbient.Set(0.3f, 0.1f, 0.1f);
 	RenderMesh(meshList[GEO_WHITEQUAD], true);
 	modelStack.PopMatrix();
 
-	// Beetle territory (top-right) - blue tint
+	// Strong Ants territory (top-right) - blue tint
 	modelStack.PushMatrix();
 	modelStack.Translate(m_gridSize * (m_noGrid * 0.75f), m_gridSize * (m_noGrid * 0.75f), -0.8f);
 	modelStack.Scale(m_gridSize * m_noGrid * 0.5f, m_gridSize * m_noGrid * 0.5f, 1.f);
-	meshList[GEO_WHITEQUAD]->material.kAmbient.Set(0.1f, 0.1f, 0.3f);
 	RenderMesh(meshList[GEO_WHITEQUAD], true);
 	modelStack.PopMatrix();
 
@@ -847,7 +933,7 @@ void SceneSandbox::Render()
 	ss << "Time: " << m_simulationTime << "s / 300s";
 	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 1, 0), 2.5f, 2, 51);
 
-	// Ant Colony Stats
+	// Speedy Ant Colony Stats
 	ss.str("");
 	ss << "=== SPEEDY ANTS COLONY ===";
 	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.3f, 0.3f), 2.5f, 2, 46);
@@ -868,7 +954,7 @@ void SceneSandbox::Render()
 	ss << "Queen HP: " << (m_speedyAntQueen->active ? static_cast<int>(m_speedyAntQueen->health) : 0);
 	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.5f, 0.5f), 2.5f, 2, 34);
 
-	// Beetle Hive Stats
+	// Strong Ant colony Stats
 	ss.str("");
 	ss << "=== STRONG ANTS COLONY ===";
 	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.3f, 0.3f, 1), 2.5f, 2, 28);
@@ -878,7 +964,7 @@ void SceneSandbox::Render()
 	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.5f, 0.5f, 1), 2.5f, 2, 25);
 
 	ss.str("");
-	ss << "Warriors: " << m_strongAntWarriorCount;
+	ss << "Soldiers: " << m_strongAntWarriorCount;
 	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.5f, 0.5f, 1), 2.5f, 2, 22);
 
 	ss.str("");
@@ -898,15 +984,15 @@ void SceneSandbox::Render()
 
 		ss.str("");
 		if (m_winner == 0)
-			ss << "WINNER: ANT COLONY";
+			ss << "WINNER: SPEEDY ANT COLONY";
 		else if (m_winner == 1)
-			ss << "WINNER: BEETLE HIVE";
+			ss << "WINNER: STRONG ANT COLONY";
 		else
 			ss << "RESULT: DRAW";
 		RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 1, 1), 3.f, 20, 27);
 	}
 
-	RenderTextOnScreen(meshList[GEO_TEXT], "Ant vs Beetle Sandbox", Color(0, 1, 0), 3, 2, 2);
+	RenderTextOnScreen(meshList[GEO_TEXT], "Speedy Ants vs Strong Ants Sandbox", Color(0, 1, 0), 3, 2, 2);
 }
 void SceneSandbox::Exit()
 {
@@ -922,4 +1008,5 @@ void SceneSandbox::Exit()
 
 	m_spatialGrid.clear();
 	m_foodLocations.clear();
+	m_wallGrid.clear();
 }
