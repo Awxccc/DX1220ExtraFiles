@@ -6,6 +6,7 @@
 #include "SceneData.h"
 #include "PostOffice.h"
 #include "ConcreteMessages.h"
+#include <iomanip>
 
 SceneSandbox::SceneSandbox()
 	: m_goList{}, m_spatialGrid{}, m_speed{}, m_worldWidth{}, m_worldHeight{},
@@ -152,28 +153,37 @@ void SceneSandbox::Init()
 	{
 		GameObject* food = FetchGO(GameObject::GO_FOOD);
 
-		// More food in center
-		float x, y;
+		// --- CHANGED: Use Grid Coordinates instead of random floats ---
+		int gridX, gridY;
+
 		if (i < foodCount / 2)
 		{
-			// Central food zone
-			x = Math::RandFloatMinMax(m_noGrid * 0.3f, m_noGrid * 0.7f) * m_gridSize;
-			y = Math::RandFloatMinMax(m_noGrid * 0.3f, m_noGrid * 0.7f) * m_gridSize;
+			// Central food zone (Indices approx 30% to 70% of grid)
+			int minC = static_cast<int>(m_noGrid * 0.3f);
+			int maxC = static_cast<int>(m_noGrid * 0.7f);
+			gridX = Math::RandIntMinMax(minC, maxC);
+			gridY = Math::RandIntMinMax(minC, maxC);
 		}
 		else
 		{
-			// Random scattered food
-			x = Math::RandFloatMinMax(2, m_noGrid - 2) * m_gridSize;
-			y = Math::RandFloatMinMax(2, m_noGrid - 2) * m_gridSize;
-		}
-		int gx = (int)(x / m_gridSize);
-		int gy = (int)(y / m_gridSize);
-		if (IsWithinBoundary(gx) && IsWithinBoundary(gy) && m_wallGrid[Get1DIndex(gx, gy)])
-		{
-			x += m_gridSize;
+			// Random scattered food (Anywhere within 2 tile padding)
+			gridX = Math::RandIntMinMax(2, m_noGrid - 3);
+			gridY = Math::RandIntMinMax(2, m_noGrid - 3);
 		}
 
-		food->pos.Set(x, y, 0);
+		// Check if inside wall (Basic check)
+		if (IsWithinBoundary(gridX) && IsWithinBoundary(gridY) && m_wallGrid[Get1DIndex(gridX, gridY)])
+		{
+			// Shift slightly if on wall (simple collision resolution)
+			gridX += 1;
+		}
+
+		// Convert Grid Index to World Position
+		// Formula: Index * Size + Offset (Offset = Size/2)
+		float worldX = gridX * m_gridSize + m_gridOffset;
+		float worldY = gridY * m_gridSize + m_gridOffset;
+
+		food->pos.Set(worldX, worldY, 0);
 		food->scale.Set(m_gridSize * 0.8f, m_gridSize * 0.8f, 1.f);
 		food->moveSpeed = 0.f;
 		food->health = 1.f;
@@ -929,7 +939,7 @@ void SceneSandbox::Render()
 	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0, 1, 0), 2.5f, 2, 54);
 
 	ss.str("");
-	ss.precision(1);
+	ss << std::fixed << std::setprecision(1);
 	ss << "Time: " << m_simulationTime << "s / 300s";
 	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 1, 0), 2.5f, 2, 51);
 
