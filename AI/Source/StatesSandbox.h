@@ -49,48 +49,48 @@ public:
 };
 
 // ============= ANT SOLDIER STATES =============
-class StateAntSoldierPatrolling : public State
+class StateSpeedyAntSoldierPatrolling : public State
 {
 	GameObject* m_go;
 	float patrolTimer;
 	Vector3 patrolTarget;
 public:
-	StateAntSoldierPatrolling(const std::string& stateID, GameObject* go = NULL);
-	virtual ~StateAntSoldierPatrolling();
+	StateSpeedyAntSoldierPatrolling(const std::string& stateID, GameObject* go = NULL);
+	virtual ~StateSpeedyAntSoldierPatrolling();
 	virtual void Enter();
 	virtual void Update(double dt);
 	virtual void Exit();
 };
 
-class StateAntSoldierAttacking : public State
+class StateSpeedyAntSoldierAttacking : public State
 {
 	GameObject* m_go;
 	float attackCooldown;
 public:
-	StateAntSoldierAttacking(const std::string& stateID, GameObject* go = NULL);
-	virtual ~StateAntSoldierAttacking();
+	StateSpeedyAntSoldierAttacking(const std::string& stateID, GameObject* go = NULL);
+	virtual ~StateSpeedyAntSoldierAttacking();
 	virtual void Enter();
 	virtual void Update(double dt);
 	virtual void Exit();
 };
 
-class StateAntSoldierDefending : public State
+class StateSpeedyAntSoldierDefending : public State
 {
 	GameObject* m_go;
 public:
-	StateAntSoldierDefending(const std::string& stateID, GameObject* go = NULL);
-	virtual ~StateAntSoldierDefending();
+	StateSpeedyAntSoldierDefending(const std::string& stateID, GameObject* go = NULL);
+	virtual ~StateSpeedyAntSoldierDefending();
 	virtual void Enter();
 	virtual void Update(double dt);
 	virtual void Exit();
 };
 
-class StateAntSoldierRetreating : public State
+class StateSpeedyAntSoldierRetreating : public State
 {
 	GameObject* m_go;
 public:
-	StateAntSoldierRetreating(const std::string& stateID, GameObject* go = NULL);
-	virtual ~StateAntSoldierRetreating();
+	StateSpeedyAntSoldierRetreating(const std::string& stateID, GameObject* go = NULL);
+	virtual ~StateSpeedyAntSoldierRetreating();
 	virtual void Enter();
 	virtual void Update(double dt);
 	virtual void Exit();
@@ -144,93 +144,93 @@ public:
 };
 
 // ============= BEETLE WORKER STATES =============
-class StateBeetleWorkerIdle : public State
+class StateStrongAntWorkerIdle : public State
 {
 	GameObject* m_go;
 public:
-	StateBeetleWorkerIdle(const std::string& stateID, GameObject* go = NULL);
-	virtual ~StateBeetleWorkerIdle();
+	StateStrongAntWorkerIdle(const std::string& stateID, GameObject* go = NULL);
+	virtual ~StateStrongAntWorkerIdle();
 	virtual void Enter();
 	virtual void Update(double dt);
 	virtual void Exit();
 };
 
-class StateBeetleWorkerForaging : public State
+class StateStrongAntWorkerForaging : public State
 {
 	GameObject* m_go;
 public:
-	StateBeetleWorkerForaging(const std::string& stateID, GameObject* go = NULL);
-	virtual ~StateBeetleWorkerForaging();
+	StateStrongAntWorkerForaging(const std::string& stateID, GameObject* go = NULL);
+	virtual ~StateStrongAntWorkerForaging();
 	virtual void Enter();
 	virtual void Update(double dt);
 	virtual void Exit();
 };
 
-class StateBeetleWorkerCollecting : public State
+class StateStrongAntWorkerCollecting : public State
 {
 	GameObject* m_go;
 public:
-	StateBeetleWorkerCollecting(const std::string& stateID, GameObject* go = NULL);
-	virtual ~StateBeetleWorkerCollecting();
+	StateStrongAntWorkerCollecting(const std::string& stateID, GameObject* go = NULL);
+	virtual ~StateStrongAntWorkerCollecting();
 	virtual void Enter();
 	virtual void Update(double dt);
 	virtual void Exit();
 };
 
-class StateBeetleWorkerEscaping : public State
+class StateStrongAntWorkerEscaping : public State
 {
 	GameObject* m_go;
 public:
-	StateBeetleWorkerEscaping(const std::string& stateID, GameObject* go = NULL);
-	virtual ~StateBeetleWorkerEscaping();
+	StateStrongAntWorkerEscaping(const std::string& stateID, GameObject* go = NULL);
+	virtual ~StateStrongAntWorkerEscaping();
 	virtual void Enter();
 	virtual void Update(double dt);
 	virtual void Exit();
 };
 
 // ============= BEETLE WARRIOR STATES =============
-class StateBeetleWarriorHunting : public State
+class StateStrongAntSoldierHunting : public State
 {
 	GameObject* m_go;
 	Vector3 huntTarget;
 public:
-	StateBeetleWarriorHunting(const std::string& stateID, GameObject* go = NULL);
-	virtual ~StateBeetleWarriorHunting();
+	StateStrongAntSoldierHunting(const std::string& stateID, GameObject* go = NULL);
+	virtual ~StateStrongAntSoldierHunting();
 	virtual void Enter();
 	virtual void Update(double dt);
 	virtual void Exit();
 };
 
-class StateBeetleWarriorCombat : public State
+class StateStrongAntSoldierCombat : public State
 {
 	GameObject* m_go;
 	float attackTimer;
 public:
-	StateBeetleWarriorCombat(const std::string& stateID, GameObject* go = NULL);
-	virtual ~StateBeetleWarriorCombat();
+	StateStrongAntSoldierCombat(const std::string& stateID, GameObject* go = NULL);
+	virtual ~StateStrongAntSoldierCombat();
 	virtual void Enter();
 	virtual void Update(double dt);
 	virtual void Exit();
 };
 
-class StateBeetleWarriorResting : public State
+class StateStrongAntSoldierResting : public State
 {
 	GameObject* m_go;
 	float restTimer;
 public:
-	StateBeetleWarriorResting(const std::string& stateID, GameObject* go = NULL);
-	virtual ~StateBeetleWarriorResting();
+	StateStrongAntSoldierResting(const std::string& stateID, GameObject* go = NULL);
+	virtual ~StateStrongAntSoldierResting();
 	virtual void Enter();
 	virtual void Update(double dt);
 	virtual void Exit();
 };
 
-class StateBeetleWarriorWithdrawing : public State
+class StateStrongAntSoldierWithdrawing : public State
 {
 	GameObject* m_go;
 public:
-	StateBeetleWarriorWithdrawing(const std::string& stateID, GameObject* go = NULL);
-	virtual ~StateBeetleWarriorWithdrawing();
+	StateStrongAntSoldierWithdrawing(const std::string& stateID, GameObject* go = NULL);
+	virtual ~StateStrongAntSoldierWithdrawing();
 	virtual void Enter();
 	virtual void Update(double dt);
 	virtual void Exit();

@@ -97,10 +97,10 @@ struct MessageSpawnUnit : public Message
 {
 	enum UNIT_TYPE
 	{
-		UNIT_ANT_WORKER,
-		UNIT_ANT_SOLDIER,
-		UNIT_BEETLE_WORKER,
-		UNIT_BEETLE_WARRIOR,
+		UNIT_SPEEDY_ANT_WORKER,
+		UNIT_SPEEDY_ANT_SOLDIER,
+		UNIT_STRONG_ANT_WORKER,
+		UNIT_STRONG_ANT_SOLDIER,
 	};
 	MessageSpawnUnit(GameObject* goValue, UNIT_TYPE unitType, Vector3 spawnPos)
 		: spawner(goValue), type(unitType), position(spawnPos) {

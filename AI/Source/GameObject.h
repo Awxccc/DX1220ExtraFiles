@@ -26,12 +26,12 @@ struct GameObject : public ObjectBase
 		GO_BIRD,
 		GO_PIPE,
 		//Assignment 1
-		GO_ANT_WORKER,
-		GO_ANT_SOLDIER,
-		GO_ANT_QUEEN,
-		GO_BEETLE_WORKER,
-		GO_BEETLE_WARRIOR,
-		GO_BEETLE_QUEEN,
+		GO_SPEEDY_ANT_WORKER,
+		GO_SPEEDY_ANT_SOLDIER,
+		GO_SPEEDY_ANT_QUEEN,
+		GO_STRONG_ANT_WORKER,
+		GO_STRONG_ANT_SOLDIER,
+		GO_STRONG_ANT_QUEEN,
 		GO_FOOD,
 		GO_NEST,
 
@@ -119,7 +119,7 @@ struct GameObject : public ObjectBase
 	bool Handle(Message* message);
 
 	//Assignment 1
-	int teamID; // 0 = Ant Colony, 1 = Beetle Hive
+	int teamID; // 0 = speedy Ant Colony, 1 = Strong ant hive
 	float attackPower;
 	float maxHealth;
 	float health;

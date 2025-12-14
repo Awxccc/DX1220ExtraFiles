@@ -42,14 +42,14 @@ protected:
 	float m_gridOffset;
 
 	// Team statistics
-	int m_antWorkerCount;
-	int m_antSoldierCount;
-	int m_beetleWorkerCount;
-	int m_beetleWarriorCount;
-	int m_antResources;
-	int m_beetleResources;
-	GameObject* m_antQueen;
-	GameObject* m_beetleQueen;
+	int m_speedyAntWorkerCount;
+	int m_speedyAntSoldierCount;
+	int m_strongAntWorkerCount;
+	int m_strongAntWarriorCount;
+	int m_speedyAntResources;
+	int m_strongAntResources;
+	GameObject* m_speedyAntQueen;
+	GameObject* m_strongAntQueen;
 
 	// Food resources
 	std::vector<Vector3> m_foodLocations;

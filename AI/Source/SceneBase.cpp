@@ -177,18 +177,18 @@ void SceneBase::Init()
 	meshList[GEO_PIPE]->textureID = LoadTGA("Image//pipe-green.tga");
 
 	//Assignment 1
-	meshList[GEO_ANT_WORKER] = MeshBuilder::GenerateQuad("antworker", Color(0, 0, 0));
-	meshList[GEO_ANT_WORKER]->textureID = LoadTGA("Image//antworker.tga");
-	meshList[GEO_ANT_SOLDIER] = MeshBuilder::GenerateQuad("antsoldier", Color(1, 0, 0));
-	meshList[GEO_ANT_SOLDIER]->textureID = LoadTGA("Image//antsoldier.tga");
-	meshList[GEO_ANT_QUEEN] = MeshBuilder::GenerateQuad("antqueen", Color(0, 1, 0));
-	meshList[GEO_ANT_QUEEN]->textureID = LoadTGA("Image//antqueen.tga");
-	meshList[GEO_BEETLE_WORKER] = MeshBuilder::GenerateQuad("beetleworker", Color(0.5f, 0.5f, 0.5f));
-	meshList[GEO_BEETLE_WORKER]->textureID = LoadTGA("Image//beetleworker.tga");
-	meshList[GEO_BEETLE_WARRIOR] = MeshBuilder::GenerateQuad("beetlewarrior", Color(1, 0, 0));
-	meshList[GEO_BEETLE_WARRIOR]->textureID = LoadTGA("Image//beetlewarrior.tga");
-	meshList[GEO_BEETLE_QUEEN] = MeshBuilder::GenerateQuad("beetlequeen", Color(0, 1, 0));
-	meshList[GEO_BEETLE_QUEEN]->textureID = LoadTGA("Image//beetlequeen.tga");
+	meshList[GEO_SPEEDY_ANT_WORKER] = MeshBuilder::GenerateQuad("antworker", Color(0, 0, 0));
+	meshList[GEO_SPEEDY_ANT_WORKER]->textureID = LoadTGA("Image//antworker.tga");
+	meshList[GEO_SPEEDY_ANT_SOLDIER] = MeshBuilder::GenerateQuad("antsoldier", Color(1, 0, 0));
+	meshList[GEO_SPEEDY_ANT_SOLDIER]->textureID = LoadTGA("Image//antsoldier.tga");
+	meshList[GEO_SPEEDY_ANT_QUEEN] = MeshBuilder::GenerateQuad("antqueen", Color(0, 1, 0));
+	meshList[GEO_SPEEDY_ANT_QUEEN]->textureID = LoadTGA("Image//antqueen.tga");
+	meshList[GEO_STRONG_ANT_WORKER] = MeshBuilder::GenerateQuad("beetleworker", Color(0.5f, 0.5f, 0.5f));
+	meshList[GEO_STRONG_ANT_WORKER]->textureID = LoadTGA("Image//beetleworker.tga");
+	meshList[GEO_STRONG_ANT_SOLDIER] = MeshBuilder::GenerateQuad("beetlewarrior", Color(1, 0, 0));
+	meshList[GEO_STRONG_ANT_SOLDIER]->textureID = LoadTGA("Image//beetlewarrior.tga");
+	meshList[GEO_STRONG_ANT_QUEEN] = MeshBuilder::GenerateQuad("beetlequeen", Color(0, 1, 0));
+	meshList[GEO_STRONG_ANT_QUEEN]->textureID = LoadTGA("Image//beetlequeen.tga");
 	meshList[GEO_FOOD] = MeshBuilder::GenerateQuad("food", Color(0, 0, 0.5f));
 	meshList[GEO_FOOD]->textureID = LoadTGA("Image//food.tga");
 	meshList[GEO_NEST] = MeshBuilder::GenerateQuad("nest", Color(1, 0, 1));

@@ -188,17 +188,17 @@ void StateAntWorkerFleeing::Update(double dt)
 void StateAntWorkerFleeing::Exit() {}
 
 // ============= ANT SOLDIER STATES IMPLEMENTATION =============
-StateAntSoldierPatrolling::StateAntSoldierPatrolling(const std::string& stateID, GameObject* go)
+StateSpeedyAntSoldierPatrolling::StateSpeedyAntSoldierPatrolling(const std::string& stateID, GameObject* go)
 	: State(stateID), m_go(go), patrolTimer(0.f) {
 }
-StateAntSoldierPatrolling::~StateAntSoldierPatrolling() {}
-void StateAntSoldierPatrolling::Enter()
+StateSpeedyAntSoldierPatrolling::~StateSpeedyAntSoldierPatrolling() {}
+void StateSpeedyAntSoldierPatrolling::Enter()
 {
 	m_go->moveSpeed = 4.f;
 	patrolTimer = 0.f;
 	patrolTarget.SetZero();
 }
-void StateAntSoldierPatrolling::Update(double dt)
+void StateSpeedyAntSoldierPatrolling::Update(double dt)
 {
 	patrolTimer += static_cast<float>(dt);
 	// Check for enemies
@@ -226,18 +226,18 @@ void StateAntSoldierPatrolling::Update(double dt)
 	}
 }
 
-void StateAntSoldierPatrolling::Exit() {}
-StateAntSoldierAttacking::StateAntSoldierAttacking(const std::string& stateID, GameObject* go)
+void StateSpeedyAntSoldierPatrolling::Exit() {}
+StateSpeedyAntSoldierAttacking::StateSpeedyAntSoldierAttacking(const std::string& stateID, GameObject* go)
 	: State(stateID), m_go(go), attackCooldown(0.f) {
 }
-StateAntSoldierAttacking::~StateAntSoldierAttacking() {}
-void StateAntSoldierAttacking::Enter()
+StateSpeedyAntSoldierAttacking::~StateSpeedyAntSoldierAttacking() {}
+void StateSpeedyAntSoldierAttacking::Enter()
 {
 	m_go->moveSpeed = 5.f;
 	attackCooldown = 0.f;
 }
 
-void StateAntSoldierAttacking::Update(double dt)
+void StateSpeedyAntSoldierAttacking::Update(double dt)
 {
 	attackCooldown += static_cast<float>(dt);
 	if (m_go->targetEnemy == nullptr || !m_go->targetEnemy->active)
@@ -278,17 +278,17 @@ void StateAntSoldierAttacking::Update(double dt)
 	}
 }
 
-void StateAntSoldierAttacking::Exit() {}
-StateAntSoldierDefending::StateAntSoldierDefending(const std::string& stateID, GameObject* go)
+void StateSpeedyAntSoldierAttacking::Exit() {}
+StateSpeedyAntSoldierDefending::StateSpeedyAntSoldierDefending(const std::string& stateID, GameObject* go)
 	: State(stateID), m_go(go) {
 }
-StateAntSoldierDefending::~StateAntSoldierDefending() {}
-void StateAntSoldierDefending::Enter()
+StateSpeedyAntSoldierDefending::~StateSpeedyAntSoldierDefending() {}
+void StateSpeedyAntSoldierDefending::Enter()
 {
 	m_go->moveSpeed = 4.f;
 	m_go->target = m_go->homeBase;
 }
-void StateAntSoldierDefending::Update(double dt)
+void StateSpeedyAntSoldierDefending::Update(double dt)
 {
 	// Return to home base
 	if ((m_go->pos - m_go->homeBase).LengthSquared() > 1.f)
@@ -315,18 +315,18 @@ void StateAntSoldierDefending::Update(double dt)
 	}
 }
 
-void StateAntSoldierDefending::Exit() {}
-StateAntSoldierRetreating::StateAntSoldierRetreating(const std::string& stateID, GameObject* go)
+void StateSpeedyAntSoldierDefending::Exit() {}
+StateSpeedyAntSoldierRetreating::StateSpeedyAntSoldierRetreating(const std::string& stateID, GameObject* go)
 	: State(stateID), m_go(go) {
 }
-StateAntSoldierRetreating::~StateAntSoldierRetreating() {}
-void StateAntSoldierRetreating::Enter()
+StateSpeedyAntSoldierRetreating::~StateSpeedyAntSoldierRetreating() {}
+void StateSpeedyAntSoldierRetreating::Enter()
 {
 	m_go->moveSpeed = 6.f;
 	PostOffice::GetInstance()->Send("Scene",
 		new MessageRequestHelp(m_go, m_go->pos, m_go->teamID));
 }
-void StateAntSoldierRetreating::Update(double dt)
+void StateSpeedyAntSoldierRetreating::Update(double dt)
 {
 	// Flee to home base
 	m_go->target = m_go->homeBase;
@@ -342,7 +342,7 @@ void StateAntSoldierRetreating::Update(double dt)
 	}
 }
 
-void StateAntSoldierRetreating::Exit() {}
+void StateSpeedyAntSoldierRetreating::Exit() {}
 // ============= ANT QUEEN STATES IMPLEMENTATION =============
 StateAntQueenSpawning::StateAntQueenSpawning(const std::string& stateID, GameObject* go)
 	: State(stateID), m_go(go) {
@@ -372,7 +372,7 @@ void StateAntQueenSpawning::Update(double dt)
 
 		// Alternate between workers and soldiers
 		MessageSpawnUnit::UNIT_TYPE unitType = (m_go->unitsSpawned % 3 == 0) ?
-			MessageSpawnUnit::UNIT_ANT_SOLDIER : MessageSpawnUnit::UNIT_ANT_WORKER;
+			MessageSpawnUnit::UNIT_SPEEDY_ANT_SOLDIER : MessageSpawnUnit::UNIT_SPEEDY_ANT_WORKER;
 
 		PostOffice::GetInstance()->Send("Scene",
 			new MessageSpawnUnit(m_go, unitType, m_go->pos));
@@ -394,7 +394,7 @@ void StateAntQueenEmergency::Enter()
 	for (int i = 0; i < 3; ++i)
 	{
 		PostOffice::GetInstance()->Send("Scene",
-			new MessageSpawnUnit(m_go, MessageSpawnUnit::UNIT_ANT_SOLDIER, m_go->pos));
+			new MessageSpawnUnit(m_go, MessageSpawnUnit::UNIT_SPEEDY_ANT_SOLDIER, m_go->pos));
 	}
 }
 void StateAntQueenEmergency::Update(double dt)
@@ -450,7 +450,7 @@ void StateAntQueenBoosting::Update(double dt)
 	{
 		m_go->spawnCooldown = 0.f;
 		PostOffice::GetInstance()->Send("Scene",
-			new MessageSpawnUnit(m_go, MessageSpawnUnit::UNIT_ANT_WORKER, m_go->pos));
+			new MessageSpawnUnit(m_go, MessageSpawnUnit::UNIT_SPEEDY_ANT_WORKER, m_go->pos));
 		boostCount++;
 	}
 
@@ -462,15 +462,15 @@ void StateAntQueenBoosting::Update(double dt)
 
 void StateAntQueenBoosting::Exit() {}
 // ============= BEETLE WORKER STATES IMPLEMENTATION =============
-StateBeetleWorkerIdle::StateBeetleWorkerIdle(const std::string& stateID, GameObject* go)
+StateStrongAntWorkerIdle::StateStrongAntWorkerIdle(const std::string& stateID, GameObject* go)
 	: State(stateID), m_go(go) {
 }
-StateBeetleWorkerIdle::~StateBeetleWorkerIdle() {}
-void StateBeetleWorkerIdle::Enter()
+StateStrongAntWorkerIdle::~StateStrongAntWorkerIdle() {}
+void StateStrongAntWorkerIdle::Enter()
 {
 	m_go->moveSpeed = 0.f;
 }
-void StateBeetleWorkerIdle::Update(double dt)
+void StateStrongAntWorkerIdle::Update(double dt)
 {
 	static float idleTimer = 0.f;
 	idleTimer += static_cast<float>(dt);
@@ -480,18 +480,18 @@ void StateBeetleWorkerIdle::Update(double dt)
 		m_go->sm->SetNextState("Foraging");
 	}
 }
-void StateBeetleWorkerIdle::Exit() {}
-StateBeetleWorkerForaging::StateBeetleWorkerForaging(const std::string& stateID, GameObject* go)
+void StateStrongAntWorkerIdle::Exit() {}
+StateStrongAntWorkerForaging::StateStrongAntWorkerForaging(const std::string& stateID, GameObject* go)
 	: State(stateID), m_go(go) {
 }
-StateBeetleWorkerForaging::~StateBeetleWorkerForaging() {}
-void StateBeetleWorkerForaging::Enter()
+StateStrongAntWorkerForaging::~StateStrongAntWorkerForaging() {}
+void StateStrongAntWorkerForaging::Enter()
 {
 	m_go->moveSpeed = 2.5f;
 	m_go->targetResource.SetZero();
 }
 
-void StateBeetleWorkerForaging::Update(double dt)
+void StateStrongAntWorkerForaging::Update(double dt)
 {
 	if (m_go->targetResource.IsZero())
 	{
@@ -516,18 +516,18 @@ void StateBeetleWorkerForaging::Update(double dt)
 	}
 }
 
-void StateBeetleWorkerForaging::Exit() {}
-StateBeetleWorkerCollecting::StateBeetleWorkerCollecting(const std::string& stateID, GameObject* go)
+void StateStrongAntWorkerForaging::Exit() {}
+StateStrongAntWorkerCollecting::StateStrongAntWorkerCollecting(const std::string& stateID, GameObject* go)
 	: State(stateID), m_go(go) {
 }
-StateBeetleWorkerCollecting::~StateBeetleWorkerCollecting() {}
-void StateBeetleWorkerCollecting::Enter()
+StateStrongAntWorkerCollecting::~StateStrongAntWorkerCollecting() {}
+void StateStrongAntWorkerCollecting::Enter()
 {
 	m_go->moveSpeed = 2.f;
 	m_go->gatherTimer = 0.f;
 	m_go->isCarryingResource = false;
 }
-void StateBeetleWorkerCollecting::Update(double dt)
+void StateStrongAntWorkerCollecting::Update(double dt)
 {
 	if (m_go->targetEnemy != nullptr)
 	{
@@ -571,18 +571,18 @@ void StateBeetleWorkerCollecting::Update(double dt)
 	}
 }
 
-void StateBeetleWorkerCollecting::Exit() {}
-StateBeetleWorkerEscaping::StateBeetleWorkerEscaping(const std::string& stateID, GameObject* go)
+void StateStrongAntWorkerCollecting::Exit() {}
+StateStrongAntWorkerEscaping::StateStrongAntWorkerEscaping(const std::string& stateID, GameObject* go)
 	: State(stateID), m_go(go) {
 }
-StateBeetleWorkerEscaping::~StateBeetleWorkerEscaping() {}
-void StateBeetleWorkerEscaping::Enter()
+StateStrongAntWorkerEscaping::~StateStrongAntWorkerEscaping() {}
+void StateStrongAntWorkerEscaping::Enter()
 {
 	m_go->moveSpeed = 4.5f;
 	PostOffice::GetInstance()->Send("Scene",
 		new MessageRequestHelp(m_go, m_go->pos, m_go->teamID));
 }
-void StateBeetleWorkerEscaping::Update(double dt)
+void StateStrongAntWorkerEscaping::Update(double dt)
 {
 	if (m_go->targetEnemy != nullptr && m_go->targetEnemy->active)
 	{
@@ -606,18 +606,18 @@ void StateBeetleWorkerEscaping::Update(double dt)
 	}
 }
 
-void StateBeetleWorkerEscaping::Exit() {}
+void StateStrongAntWorkerEscaping::Exit() {}
 // ============= BEETLE WARRIOR STATES IMPLEMENTATION =============
-StateBeetleWarriorHunting::StateBeetleWarriorHunting(const std::string& stateID, GameObject* go)
+StateStrongAntSoldierHunting::StateStrongAntSoldierHunting(const std::string& stateID, GameObject* go)
 	: State(stateID), m_go(go) {
 }
-StateBeetleWarriorHunting::~StateBeetleWarriorHunting() {}
-void StateBeetleWarriorHunting::Enter()
+StateStrongAntSoldierHunting::~StateStrongAntSoldierHunting() {}
+void StateStrongAntSoldierHunting::Enter()
 {
 	m_go->moveSpeed = 5.f;
 	huntTarget.SetZero();
 }
-void StateBeetleWarriorHunting::Update(double dt)
+void StateStrongAntSoldierHunting::Update(double dt)
 {
 	if (m_go->targetEnemy != nullptr && m_go->targetEnemy->active)
 	{
@@ -641,17 +641,17 @@ void StateBeetleWarriorHunting::Update(double dt)
 	}
 }
 
-void StateBeetleWarriorHunting::Exit() {}
-StateBeetleWarriorCombat::StateBeetleWarriorCombat(const std::string& stateID, GameObject* go)
+void StateStrongAntSoldierHunting::Exit() {}
+StateStrongAntSoldierCombat::StateStrongAntSoldierCombat(const std::string& stateID, GameObject* go)
 	: State(stateID), m_go(go), attackTimer(0.f) {
 }
-StateBeetleWarriorCombat::~StateBeetleWarriorCombat() {}
-void StateBeetleWarriorCombat::Enter()
+StateStrongAntSoldierCombat::~StateStrongAntSoldierCombat() {}
+void StateStrongAntSoldierCombat::Enter()
 {
 	m_go->moveSpeed = 6.f;
 	attackTimer = 0.f;
 }
-void StateBeetleWarriorCombat::Update(double dt)
+void StateStrongAntSoldierCombat::Update(double dt)
 {
 	attackTimer += static_cast<float>(dt);
 	if (m_go->targetEnemy == nullptr || !m_go->targetEnemy->active)
@@ -689,18 +689,18 @@ void StateBeetleWarriorCombat::Update(double dt)
 	}
 }
 
-void StateBeetleWarriorCombat::Exit() {}
-StateBeetleWarriorResting::StateBeetleWarriorResting(const std::string& stateID, GameObject* go)
+void StateStrongAntSoldierCombat::Exit() {}
+StateStrongAntSoldierResting::StateStrongAntSoldierResting(const std::string& stateID, GameObject* go)
 	: State(stateID), m_go(go), restTimer(0.f) {
 }
-StateBeetleWarriorResting::~StateBeetleWarriorResting() {}
-void StateBeetleWarriorResting::Enter()
+StateStrongAntSoldierResting::~StateStrongAntSoldierResting() {}
+void StateStrongAntSoldierResting::Enter()
 {
 	m_go->moveSpeed = 2.f;
 	restTimer = 0.f;
 	m_go->target = m_go->homeBase;
 }
-void StateBeetleWarriorResting::Update(double dt)
+void StateStrongAntSoldierResting::Update(double dt)
 {
 	restTimer += static_cast<float>(dt);
 	// Move towards home
@@ -725,18 +725,18 @@ void StateBeetleWarriorResting::Update(double dt)
 	}
 }
 
-void StateBeetleWarriorResting::Exit() {}
-StateBeetleWarriorWithdrawing::StateBeetleWarriorWithdrawing(const std::string& stateID, GameObject* go)
+void StateStrongAntSoldierResting::Exit() {}
+StateStrongAntSoldierWithdrawing::StateStrongAntSoldierWithdrawing(const std::string& stateID, GameObject* go)
 	: State(stateID), m_go(go) {
 }
-StateBeetleWarriorWithdrawing::~StateBeetleWarriorWithdrawing() {}
-void StateBeetleWarriorWithdrawing::Enter()
+StateStrongAntSoldierWithdrawing::~StateStrongAntSoldierWithdrawing() {}
+void StateStrongAntSoldierWithdrawing::Enter()
 {
 	m_go->moveSpeed = 7.f;
 	PostOffice::GetInstance()->Send("Scene",
 		new MessageRequestHelp(m_go, m_go->pos, m_go->teamID));
 }
-void StateBeetleWarriorWithdrawing::Update(double dt)
+void StateStrongAntSoldierWithdrawing::Update(double dt)
 {
 	m_go->target = m_go->homeBase;
 	if ((m_go->pos - m_go->homeBase).LengthSquared() < 3.f)
@@ -750,7 +750,7 @@ void StateBeetleWarriorWithdrawing::Update(double dt)
 	}
 }
 
-void StateBeetleWarriorWithdrawing::Exit() {}
+void StateStrongAntSoldierWithdrawing::Exit() {}
 // ============= BEETLE QUEEN STATES IMPLEMENTATION =============
 StateBeetleQueenProducing::StateBeetleQueenProducing(const std::string& stateID, GameObject* go)
 	: State(stateID), m_go(go) {
@@ -777,7 +777,7 @@ void StateBeetleQueenProducing::Update(double dt)
 		m_go->spawnCooldown = 0.f;
 
 		MessageSpawnUnit::UNIT_TYPE unitType = (m_go->unitsSpawned % 2 == 0) ?
-			MessageSpawnUnit::UNIT_BEETLE_WARRIOR : MessageSpawnUnit::UNIT_BEETLE_WORKER;
+			MessageSpawnUnit::UNIT_STRONG_ANT_SOLDIER : MessageSpawnUnit::UNIT_STRONG_ANT_WORKER;
 
 		PostOffice::GetInstance()->Send("Scene",
 			new MessageSpawnUnit(m_go, unitType, m_go->pos));
@@ -799,7 +799,7 @@ void StateBeetleQueenAlert::Enter()
 	for (int i = 0; i < 2; ++i)
 	{
 		PostOffice::GetInstance()->Send("Scene",
-			new MessageSpawnUnit(m_go, MessageSpawnUnit::UNIT_BEETLE_WARRIOR, m_go->pos));
+			new MessageSpawnUnit(m_go, MessageSpawnUnit::UNIT_STRONG_ANT_SOLDIER, m_go->pos));
 	}
 }
 void StateBeetleQueenAlert::Update(double dt)
@@ -853,7 +853,7 @@ void StateBeetleQueenWarmode::Update(double dt)
 	{
 		m_go->spawnCooldown = 0.f;
 		PostOffice::GetInstance()->Send("Scene",
-			new MessageSpawnUnit(m_go, MessageSpawnUnit::UNIT_BEETLE_WARRIOR, m_go->pos));
+			new MessageSpawnUnit(m_go, MessageSpawnUnit::UNIT_STRONG_ANT_SOLDIER, m_go->pos));
 		warCount++;
 	}
 

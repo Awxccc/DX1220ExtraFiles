@@ -9,9 +9,9 @@
 
 SceneSandbox::SceneSandbox()
 	: m_goList{}, m_spatialGrid{}, m_speed{}, m_worldWidth{}, m_worldHeight{},
-	m_noGrid{}, m_gridSize{}, m_gridOffset{}, m_antWorkerCount{}, m_antSoldierCount{},
-	m_beetleWorkerCount{}, m_beetleWarriorCount{}, m_antResources{}, m_beetleResources{},
-	m_antQueen{}, m_beetleQueen{}, m_foodLocations{}, m_simulationTime{},
+	m_noGrid{}, m_gridSize{}, m_gridOffset{}, m_speedyAntWorkerCount{}, m_speedyAntSoldierCount{},
+	m_strongAntWorkerCount{}, m_strongAntWarriorCount{}, m_speedyAntResources{}, m_strongAntResources{},
+	m_speedyAntQueen{}, m_strongAntQueen{}, m_foodLocations{}, m_simulationTime{},
 	m_simulationEnded{}, m_winner{}, m_updateTimer{}, m_updateCycle{}
 {
 }
@@ -49,67 +49,67 @@ void SceneSandbox::Init()
 	PostOffice::GetInstance()->Register("Scene", this);
 
 	// Initialize game state
-	m_antWorkerCount = 0;
-	m_antSoldierCount = 0;
-	m_beetleWorkerCount = 0;
-	m_beetleWarriorCount = 0;
-	m_antResources = 0;
-	m_beetleResources = 0;
+	m_speedyAntWorkerCount = 0;
+	m_speedyAntSoldierCount = 0;
+	m_strongAntWorkerCount = 0;
+	m_strongAntWarriorCount = 0;
+	m_speedyAntResources = 0;
+	m_strongAntResources = 0;
 	m_simulationTime = 0.f;
 	m_simulationEnded = false;
 	m_winner = 2; // Draw by default
 	m_updateTimer = 0.f;
 	m_updateCycle = 0;
 
-	// Spawn Ant Queen (bottom-left corner)
-	m_antQueen = FetchGO(GameObject::GO_ANT_QUEEN);
-	m_antQueen->teamID = 0;
-	m_antQueen->pos.Set(m_gridSize * 3.f, m_gridSize * 3.f, 0);
-	m_antQueen->homeBase = m_antQueen->pos;
-	m_antQueen->scale.Set(m_gridSize * 1.5f, m_gridSize * 1.5f, 1.f);
-	m_antQueen->maxHealth = 50.f;
-	m_antQueen->health = 50.f;
-	m_antQueen->attackPower = 0.f;
-	m_antQueen->moveSpeed = 0.f;
-	m_antQueen->detectionRange = m_gridSize * 8.f;
-	m_antQueen->attackRange = 0.f;
+	// Spawn Speedy Ant Queen (bottom-left corner)
+	m_speedyAntQueen = FetchGO(GameObject::GO_SPEEDY_ANT_QUEEN);
+	m_speedyAntQueen->teamID = 0;
+	m_speedyAntQueen->pos.Set(m_gridSize * 3.f, m_gridSize * 3.f, 0);
+	m_speedyAntQueen->homeBase = m_speedyAntQueen->pos;
+	m_speedyAntQueen->scale.Set(m_gridSize * 1.5f, m_gridSize * 1.5f, 1.f);
+	m_speedyAntQueen->maxHealth = 50.f;
+	m_speedyAntQueen->health = 50.f;
+	m_speedyAntQueen->attackPower = 0.f;
+	m_speedyAntQueen->moveSpeed = 0.f;
+	m_speedyAntQueen->detectionRange = m_gridSize * 8.f;
+	m_speedyAntQueen->attackRange = 0.f;
 
-	// Spawn Beetle Queen (top-right corner)
-	m_beetleQueen = FetchGO(GameObject::GO_BEETLE_QUEEN);
-	m_beetleQueen->teamID = 1;
-	m_beetleQueen->pos.Set(m_gridSize * (m_noGrid - 3.f), m_gridSize * (m_noGrid - 3.f), 0);
-	m_beetleQueen->homeBase = m_beetleQueen->pos;
-	m_beetleQueen->scale.Set(m_gridSize * 1.5f, m_gridSize * 1.5f, 1.f);
-	m_beetleQueen->maxHealth = 50.f;
-	m_beetleQueen->health = 50.f;
-	m_beetleQueen->attackPower = 0.f;
-	m_beetleQueen->moveSpeed = 0.f;
-	m_beetleQueen->detectionRange = m_gridSize * 8.f;
-	m_beetleQueen->attackRange = 0.f;
+	// Spawn Strong Ant Queen (top-right corner)
+	m_strongAntQueen = FetchGO(GameObject::GO_STRONG_ANT_QUEEN);
+	m_strongAntQueen->teamID = 1;
+	m_strongAntQueen->pos.Set(m_gridSize * (m_noGrid - 3.f), m_gridSize * (m_noGrid - 3.f), 0);
+	m_strongAntQueen->homeBase = m_strongAntQueen->pos;
+	m_strongAntQueen->scale.Set(m_gridSize * 1.5f, m_gridSize * 1.5f, 1.f);
+	m_strongAntQueen->maxHealth = 50.f;
+	m_strongAntQueen->health = 50.f;
+	m_strongAntQueen->attackPower = 0.f;
+	m_strongAntQueen->moveSpeed = 0.f;
+	m_strongAntQueen->detectionRange = m_gridSize * 8.f;
+	m_strongAntQueen->attackRange = 0.f;
 
 	// Spawn initial workers for both teams
 	for (int i = 0; i < 3; ++i)
 	{
 		// Ant workers
-		SpawnUnit(MessageSpawnUnit::UNIT_ANT_WORKER,
-			m_antQueen->pos + Vector3(Math::RandFloatMinMax(-2, 2) * m_gridSize,
+		SpawnUnit(MessageSpawnUnit::UNIT_SPEEDY_ANT_WORKER,
+			m_speedyAntQueen->pos + Vector3(Math::RandFloatMinMax(-2, 2) * m_gridSize,
 				Math::RandFloatMinMax(-2, 2) * m_gridSize, 0), 0);
 
 		// Beetle workers
-		SpawnUnit(MessageSpawnUnit::UNIT_BEETLE_WORKER,
-			m_beetleQueen->pos + Vector3(Math::RandFloatMinMax(-2, 2) * m_gridSize,
+		SpawnUnit(MessageSpawnUnit::UNIT_STRONG_ANT_WORKER,
+			m_strongAntQueen->pos + Vector3(Math::RandFloatMinMax(-2, 2) * m_gridSize,
 				Math::RandFloatMinMax(-2, 2) * m_gridSize, 0), 1);
 	}
 
 	// Spawn initial soldiers
 	for (int i = 0; i < 2; ++i)
 	{
-		SpawnUnit(MessageSpawnUnit::UNIT_ANT_SOLDIER,
-			m_antQueen->pos + Vector3(Math::RandFloatMinMax(-3, 3) * m_gridSize,
+		SpawnUnit(MessageSpawnUnit::UNIT_SPEEDY_ANT_SOLDIER,
+			m_speedyAntQueen->pos + Vector3(Math::RandFloatMinMax(-3, 3) * m_gridSize,
 				Math::RandFloatMinMax(-3, 3) * m_gridSize, 0), 0);
 
-		SpawnUnit(MessageSpawnUnit::UNIT_BEETLE_WARRIOR,
-			m_beetleQueen->pos + Vector3(Math::RandFloatMinMax(-3, 3) * m_gridSize,
+		SpawnUnit(MessageSpawnUnit::UNIT_STRONG_ANT_SOLDIER,
+			m_strongAntQueen->pos + Vector3(Math::RandFloatMinMax(-3, 3) * m_gridSize,
 				Math::RandFloatMinMax(-3, 3) * m_gridSize, 0), 1);
 	}
 
@@ -145,7 +145,7 @@ void SceneSandbox::Init()
 	std::cout << "=== Sandbox Simulation Started ===" << std::endl;
 	std::cout << "Grid Size: " << m_noGrid << "x" << m_noGrid << std::endl;
 	std::cout << "Food Resources: " << foodCount << std::endl;
-	std::cout << "Ant Colony: Bottom-Left | Beetle Hive: Top-Right" << std::endl;
+	std::cout << "Speedy Ant Colony: Bottom-Left | Strong Ant Colony: Top-Right" << std::endl;
 	std::cout << "Simulation will run for 5 minutes..." << std::endl;
 }
 
@@ -176,80 +176,86 @@ void SceneSandbox::SpawnUnit(MessageSpawnUnit::UNIT_TYPE unitType, Vector3 posit
 
 	switch (unitType)
 	{
-	case MessageSpawnUnit::UNIT_ANT_WORKER:
-		unit = FetchGO(GameObject::GO_ANT_WORKER);
+		// --- COLONY 1: SPEEDY ANTS (Formerly Ant Worker/Soldier) ---
+	case MessageSpawnUnit::UNIT_SPEEDY_ANT_WORKER:
+		unit = FetchGO(GameObject::GO_SPEEDY_ANT_WORKER);
 		unit->teamID = 0;
-		unit->homeBase = m_antQueen->pos;
-		unit->maxHealth = 8.f;
-		unit->health = 8.f;
-		unit->attackPower = 0.5f;
-		unit->moveSpeed = 3.f;
-		unit->detectionRange = m_gridSize * 6.f;
+		unit->homeBase = m_speedyAntQueen->pos;
+		unit->maxHealth = 5.f;     // Fragile
+		unit->health = 5.f;
+		unit->attackPower = 0.2f;  // Weak bite
+		unit->moveSpeed = 6.f;     // FAST (Standard was 3)
+		unit->detectionRange = m_gridSize * 7.f;
 		unit->attackRange = m_gridSize * 0.8f;
+
 		unit->sm = new StateMachine();
 		unit->sm->AddState(new StateAntWorkerIdle("Idle", unit));
 		unit->sm->AddState(new StateAntWorkerSearching("Searching", unit));
 		unit->sm->AddState(new StateAntWorkerGathering("Gathering", unit));
 		unit->sm->AddState(new StateAntWorkerFleeing("Fleeing", unit));
 		unit->sm->SetNextState("Idle");
-		m_antWorkerCount++;
+		m_speedyAntWorkerCount++;
 		break;
 
-	case MessageSpawnUnit::UNIT_ANT_SOLDIER:
-		unit = FetchGO(GameObject::GO_ANT_SOLDIER);
+	case MessageSpawnUnit::UNIT_SPEEDY_ANT_SOLDIER:
+		unit = FetchGO(GameObject::GO_SPEEDY_ANT_SOLDIER);
 		unit->teamID = 0;
-		unit->homeBase = m_antQueen->pos;
-		unit->maxHealth = 15.f;
-		unit->health = 15.f;
-		unit->attackPower = 2.5f;
-		unit->moveSpeed = 4.f;
-		unit->detectionRange = m_gridSize * 8.f;
+		unit->homeBase = m_speedyAntQueen->pos;
+		unit->maxHealth = 10.f;
+		unit->health = 10.f;
+		unit->attackPower = 1.5f; // Lower damage
+		unit->moveSpeed = 8.f;    // VERY FAST (Standard was 4)
+		unit->detectionRange = m_gridSize * 9.f;
 		unit->attackRange = m_gridSize * 1.2f;
+
 		unit->sm = new StateMachine();
-		unit->sm->AddState(new StateAntSoldierPatrolling("Patrolling", unit));
-		unit->sm->AddState(new StateAntSoldierAttacking("Attacking", unit));
-		unit->sm->AddState(new StateAntSoldierDefending("Defending", unit));
-		unit->sm->AddState(new StateAntSoldierRetreating("Retreating", unit));
+		unit->sm->AddState(new StateSpeedyAntSoldierPatrolling("Patrolling", unit));
+		unit->sm->AddState(new StateSpeedyAntSoldierAttacking("Attacking", unit));
+		unit->sm->AddState(new StateSpeedyAntSoldierDefending("Defending", unit));
+		unit->sm->AddState(new StateSpeedyAntSoldierRetreating("Retreating", unit));
 		unit->sm->SetNextState("Patrolling");
-		m_antSoldierCount++;
+		m_speedyAntSoldierCount++;
 		break;
 
-	case MessageSpawnUnit::UNIT_BEETLE_WORKER:
-		unit = FetchGO(GameObject::GO_BEETLE_WORKER);
+		// --- COLONY 2: STRONG ANTS ---
+	case MessageSpawnUnit::UNIT_STRONG_ANT_WORKER:
+		unit = FetchGO(GameObject::GO_STRONG_ANT_WORKER);
 		unit->teamID = 1;
-		unit->homeBase = m_beetleQueen->pos;
-		unit->maxHealth = 7.f;
-		unit->health = 7.f;
-		unit->attackPower = 0.3f;
-		unit->moveSpeed = 2.5f;
+		unit->homeBase = m_strongAntQueen->pos;
+		unit->maxHealth = 15.f;    // Tough worker
+		unit->health = 15.f;
+		unit->attackPower = 1.0f;  // Stronger bite
+		unit->moveSpeed = 2.0f;    // SLOW (Standard was 2.5)
 		unit->detectionRange = m_gridSize * 5.f;
 		unit->attackRange = m_gridSize * 0.7f;
+
 		unit->sm = new StateMachine();
-		unit->sm->AddState(new StateBeetleWorkerIdle("Idle", unit));
-		unit->sm->AddState(new StateBeetleWorkerForaging("Foraging", unit));
-		unit->sm->AddState(new StateBeetleWorkerCollecting("Collecting", unit));
-		unit->sm->AddState(new StateBeetleWorkerEscaping("Escaping", unit));
+		unit->sm->AddState(new StateStrongAntWorkerIdle("Idle", unit));
+		unit->sm->AddState(new StateStrongAntWorkerForaging("Foraging", unit));
+		unit->sm->AddState(new StateStrongAntWorkerCollecting("Collecting", unit));
+		unit->sm->AddState(new StateStrongAntWorkerEscaping("Escaping", unit));
 		unit->sm->SetNextState("Idle");
-		m_beetleWorkerCount++;
+		m_strongAntWorkerCount++;
 		break;
 
-	case MessageSpawnUnit::UNIT_BEETLE_WARRIOR:
-		unit = FetchGO(GameObject::GO_BEETLE_WARRIOR);
+	case MessageSpawnUnit::UNIT_STRONG_ANT_SOLDIER:
+		unit = FetchGO(GameObject::GO_STRONG_ANT_SOLDIER);
 		unit->teamID = 1;
-		unit->homeBase = m_beetleQueen->pos;
-		unit->maxHealth = 18.f;
-		unit->health = 18.f;
-		unit->attackPower = 3.f;
-		unit->moveSpeed = 5.f;
-		unit->detectionRange = m_gridSize * 9.f;
+		unit->homeBase = m_strongAntQueen->pos;
+		unit->maxHealth = 30.f;    // Tank
+		unit->health = 30.f;
+		unit->attackPower = 5.0f;  // Heavy Hitter
+		unit->moveSpeed = 3.0f;    // SLOW (Standard was 5)
+		unit->detectionRange = m_gridSize * 6.f;
 		unit->attackRange = m_gridSize * 1.3f;
+
 		unit->sm = new StateMachine();
-		unit->sm->AddState(new StateBeetleWarriorHunting("Hunting", unit));
-		unit->sm->AddState(new StateBeetleWarriorCombat("Combat", unit));
-		unit->sm->AddState(new StateBeetleWarriorResting("Resting", unit));
-		unit->sm->AddState(new StateBeetleWarriorWithdrawing("Withdrawing", unit));
+		unit->sm->AddState(new StateStrongAntSoldierHunting("Hunting", unit));
+		unit->sm->AddState(new StateStrongAntSoldierCombat("Combat", unit));
+		unit->sm->AddState(new StateStrongAntSoldierResting("Resting", unit));
+		unit->sm->AddState(new StateStrongAntSoldierWithdrawing("Withdrawing", unit));
 		unit->sm->SetNextState("Hunting");
-		m_beetleWarriorCount++;
+		m_strongAntWarriorCount++;
 		break;
 	}
 
@@ -290,33 +296,33 @@ void SceneSandbox::Update(double dt)
 		{
 			m_simulationEnded = true;
 			// Determine winner based on resources and population
-			int antTotal = m_antWorkerCount + m_antSoldierCount + m_antResources;
-			int beetleTotal = m_beetleWorkerCount + m_beetleWarriorCount + m_beetleResources;
+			int speedyAntTotal = m_speedyAntWorkerCount + m_speedyAntSoldierCount + m_speedyAntResources;
+			int strongAntTotal = m_strongAntWorkerCount + m_strongAntWarriorCount + m_strongAntResources;
 
-			if (antTotal > beetleTotal)
+			if (speedyAntTotal > strongAntTotal)
 				m_winner = 0;
-			else if (beetleTotal > antTotal)
+			else if (strongAntTotal > speedyAntTotal)
 				m_winner = 1;
 			else
 				m_winner = 2;
 
 			std::cout << "\n=== SIMULATION ENDED ===" << std::endl;
-			std::cout << "Winner: " << (m_winner == 0 ? "ANT COLONY" :
-				m_winner == 1 ? "BEETLE HIVE" : "DRAW") << std::endl;
+			std::cout << "Winner: " << (m_winner == 0 ? "SPEEDY ANT COLONY" :
+				m_winner == 1 ? "STRONG ANT COLONY" : "DRAW") << std::endl;
 		}
 
 		// Check if queens are dead
-		if (!m_antQueen->active)
+		if (!m_speedyAntQueen->active)
 		{
 			m_simulationEnded = true;
 			m_winner = 1;
-			std::cout << "\n=== ANT QUEEN ELIMINATED - BEETLES WIN ===" << std::endl;
+			std::cout << "\n=== SPEEDY ANT QUEEN ELIMINATED - STRONG ANTS WIN ===" << std::endl;
 		}
-		if (!m_beetleQueen->active)
+		if (!m_strongAntQueen->active)
 		{
 			m_simulationEnded = true;
 			m_winner = 0;
-			std::cout << "\n=== BEETLE QUEEN ELIMINATED - ANTS WIN ===" << std::endl;
+			std::cout << "\n=== STRONG ANT QUEEN ELIMINATED - SPEEDY ANTS WIN ===" << std::endl;
 		}
 	}
 
@@ -352,7 +358,7 @@ void SceneSandbox::Update(double dt)
 		if ((cycleCheck % 3) == m_updateCycle)
 		{
 			DetectNearbyEntities(go);
-			if (go->type == GameObject::GO_ANT_WORKER || go->type == GameObject::GO_BEETLE_WORKER)
+			if (go->type == GameObject::GO_SPEEDY_ANT_WORKER || go->type == GameObject::GO_STRONG_ANT_WORKER)
 			{
 				FindNearestResource(go);
 			}
@@ -364,32 +370,76 @@ void SceneSandbox::Update(double dt)
 	for (std::vector<GameObject*>::iterator it = m_goList.begin(); it != m_goList.end(); ++it)
 	{
 		GameObject* go = (GameObject*)*it;
-		if (!go->active)
+		if (!go->active || go->moveSpeed <= 0.f)
 			continue;
 
-		Vector3 dir = go->target - go->pos;
-		float distSq = dir.LengthSquared();
+		// 1. Calculate Vector to Target
+		Vector3 toTarget = go->target - go->pos;
+		float distToTarget = toTarget.Length();
 
-		if (distSq > 0.01f && distSq < go->moveSpeed * go->moveSpeed * dt * dt * m_speed * m_speed * 4.f)
-		{
-			go->pos = go->target;
-		}
-		else if (distSq > 0.01f)
-		{
-			dir.Normalize();
-			go->pos += dir * go->moveSpeed * static_cast<float>(dt) * m_speed;
+		// 2. Identify Current Grid Center
+		int gridX = static_cast<int>((go->pos.x - m_gridOffset + m_gridSize * 0.5f) / m_gridSize);
+		int gridY = static_cast<int>((go->pos.y - m_gridOffset + m_gridSize * 0.5f) / m_gridSize);
 
-			// Keep within bounds
-			go->pos.x = Math::Clamp(go->pos.x, m_gridSize, (m_noGrid - 1) * m_gridSize);
-			go->pos.y = Math::Clamp(go->pos.y, m_gridSize, (m_noGrid - 1) * m_gridSize);
+		// Clamp index
+		gridX = Math::Clamp(gridX, 0, m_noGrid - 1);
+		gridY = Math::Clamp(gridY, 0, m_noGrid - 1);
+
+		Vector3 tileCenter;
+		tileCenter.x = gridX * m_gridSize + m_gridOffset;
+		tileCenter.y = gridY * m_gridSize + m_gridOffset;
+		tileCenter.z = go->pos.z;
+
+		// 3. Move Logic
+		float moveStep = go->moveSpeed * static_cast<float>(dt) * m_speed;
+		float distToCenter = (go->pos - tileCenter).Length();
+
+		// If we are at the tile center (or close enough)
+		if (distToCenter < moveStep)
+		{
+			go->pos = tileCenter; // Snap to center
+
+			if (distToTarget < m_gridSize * 0.5f)
+			{
+				go->pos = go->target; // Arrived at destination
+			}
+			else
+			{
+				// Pick next tile (Manhattan Movement)
+				Vector3 moveDir(0, 0, 0);
+				if (abs(toTarget.x) >= abs(toTarget.y))
+					moveDir.x = (toTarget.x > 0) ? 1.f : -1.f;
+				else
+					moveDir.y = (toTarget.y > 0) ? 1.f : -1.f;
+
+				go->pos += moveDir * moveStep;
+			}
 		}
+		else
+		{
+			// In Transit - Lock to axis
+			float offsetX = abs(go->pos.x - tileCenter.x);
+			float offsetY = abs(go->pos.y - tileCenter.y);
+			Vector3 moveDir(0, 0, 0);
+
+			if (offsetX > offsetY) // Moving X
+				moveDir.x = (toTarget.x > 0) ? 1.f : -1.f;
+			else // Moving Y
+				moveDir.y = (toTarget.y > 0) ? 1.f : -1.f;
+
+			go->pos += moveDir * moveStep;
+		}
+
+		// Boundary check
+		go->pos.x = Math::Clamp(go->pos.x, m_gridOffset, (m_noGrid - 1) * m_gridSize + m_gridOffset);
+		go->pos.y = Math::Clamp(go->pos.y, m_gridOffset, (m_noGrid - 1) * m_gridSize + m_gridOffset);
 	}
 
 	// Update counts
-	m_antWorkerCount = 0;
-	m_antSoldierCount = 0;
-	m_beetleWorkerCount = 0;
-	m_beetleWarriorCount = 0;
+	m_speedyAntWorkerCount = 0;
+	m_speedyAntSoldierCount = 0;
+	m_strongAntWorkerCount = 0;
+	m_strongAntWarriorCount = 0;
 	int totalObjects = 0;
 
 	for (std::vector<GameObject*>::iterator it = m_goList.begin(); it != m_goList.end(); ++it)
@@ -402,17 +452,17 @@ void SceneSandbox::Update(double dt)
 
 		switch (go->type)
 		{
-		case GameObject::GO_ANT_WORKER:
-			m_antWorkerCount++;
+		case GameObject::GO_SPEEDY_ANT_WORKER:
+			m_speedyAntWorkerCount++;
 			break;
-		case GameObject::GO_ANT_SOLDIER:
-			m_antSoldierCount++;
+		case GameObject::GO_SPEEDY_ANT_SOLDIER:
+			m_speedyAntSoldierCount++;
 			break;
-		case GameObject::GO_BEETLE_WORKER:
-			m_beetleWorkerCount++;
+		case GameObject::GO_STRONG_ANT_WORKER:
+			m_strongAntWorkerCount++;
 			break;
-		case GameObject::GO_BEETLE_WARRIOR:
-			m_beetleWarriorCount++;
+		case GameObject::GO_STRONG_ANT_SOLDIER:
+			m_strongAntWarriorCount++;
 			break;
 		}
 	}
@@ -423,8 +473,8 @@ void SceneSandbox::Update(double dt)
 void SceneSandbox::DetectNearbyEntities(GameObject* go)
 {
 	if (go->type == GameObject::GO_FOOD ||
-		go->type == GameObject::GO_ANT_QUEEN ||
-		go->type == GameObject::GO_BEETLE_QUEEN)
+		go->type == GameObject::GO_SPEEDY_ANT_QUEEN ||
+		go->type == GameObject::GO_STRONG_ANT_QUEEN)
 		return;
 
 	go->targetEnemy = nullptr;
@@ -469,11 +519,11 @@ void SceneSandbox::DetectNearbyEntities(GameObject* go)
 						go->targetEnemy = other;
 
 						// Queens detect threats
-						if (go->type == GameObject::GO_ANT_QUEEN && other->teamID == 1)
+						if (go->type == GameObject::GO_SPEEDY_ANT_QUEEN && other->teamID == 1)
 						{
 							go->targetEnemy = other;
 						}
-						else if (go->type == GameObject::GO_BEETLE_QUEEN && other->teamID == 0)
+						else if (go->type == GameObject::GO_STRONG_ANT_QUEEN && other->teamID == 0)
 						{
 							go->targetEnemy = other;
 						}
@@ -508,11 +558,11 @@ bool SceneSandbox::IsInTerritory(Vector3 pos, int teamID) const
 {
 	float halfGrid = m_noGrid * 0.5f;
 
-	if (teamID == 0) // Ant territory (bottom-left)
+	if (teamID == 0) // Speedy Ant territory (bottom-left)
 	{
 		return pos.x < halfGrid * m_gridSize && pos.y < halfGrid * m_gridSize;
 	}
-	else if (teamID == 1) // Beetle territory (top-right)
+	else if (teamID == 1) // Strong ant territory (top-right)
 	{
 		return pos.x > halfGrid * m_gridSize && pos.y > halfGrid * m_gridSize;
 	}
@@ -583,9 +633,9 @@ bool SceneSandbox::Handle(Message* message)
 	if (msgResource)
 	{
 		if (msgResource->teamID == 0)
-			m_antResources += msgResource->resourceAmount;
+			m_speedyAntResources += msgResource->resourceAmount;
 		else
-			m_beetleResources += msgResource->resourceAmount;
+			m_strongAntResources += msgResource->resourceAmount;
 		return true;
 	}
 
@@ -614,7 +664,7 @@ bool SceneSandbox::Handle(Message* message)
 				continue;
 
 			// Soldiers/Warriors respond to enemy sightings
-			if ((go->type == GameObject::GO_ANT_SOLDIER || go->type == GameObject::GO_BEETLE_WARRIOR) &&
+			if ((go->type == GameObject::GO_SPEEDY_ANT_SOLDIER || go->type == GameObject::GO_STRONG_ANT_SOLDIER) &&
 				(go->pos - msgEnemy->enemy->pos).LengthSquared() < go->detectionRange * go->detectionRange * 2.f)
 			{
 				go->targetEnemy = msgEnemy->enemy;
@@ -633,7 +683,7 @@ bool SceneSandbox::Handle(Message* message)
 			if (!go->active || go->teamID != msgHelp->teamID)
 				continue;
 
-			if ((go->type == GameObject::GO_ANT_SOLDIER || go->type == GameObject::GO_BEETLE_WARRIOR) &&
+			if ((go->type == GameObject::GO_SPEEDY_ANT_SOLDIER || go->type == GameObject::GO_STRONG_ANT_SOLDIER) &&
 				(go->pos - msgHelp->position).LengthSquared() < m_gridSize * m_gridSize * 64.f)
 			{
 				go->target = msgHelp->position;
@@ -652,7 +702,7 @@ bool SceneSandbox::Handle(Message* message)
 			if (!go->active || go->teamID != msgQueen->teamID)
 				continue;
 
-			if (go->type == GameObject::GO_ANT_SOLDIER || go->type == GameObject::GO_BEETLE_WARRIOR)
+			if (go->type == GameObject::GO_SPEEDY_ANT_SOLDIER || go->type == GameObject::GO_STRONG_ANT_SOLDIER)
 			{
 				go->target = msgQueen->queen->pos;
 				go->targetEnemy = msgQueen->queen->targetEnemy;
@@ -672,23 +722,23 @@ void SceneSandbox::RenderGO(GameObject* go)
 
 	switch (go->type)
 	{
-	case GameObject::GO_ANT_WORKER:
-		RenderMesh(meshList[GEO_ANT_WORKER], false);
+	case GameObject::GO_SPEEDY_ANT_WORKER:
+		RenderMesh(meshList[GEO_SPEEDY_ANT_WORKER], false);
 		break;
-	case GameObject::GO_ANT_SOLDIER:
-		RenderMesh(meshList[GEO_ANT_SOLDIER], false);
+	case GameObject::GO_SPEEDY_ANT_SOLDIER:
+		RenderMesh(meshList[GEO_SPEEDY_ANT_SOLDIER], false);
 		break;
-	case GameObject::GO_ANT_QUEEN:
-		RenderMesh(meshList[GEO_ANT_QUEEN], false);
+	case GameObject::GO_SPEEDY_ANT_QUEEN:
+		RenderMesh(meshList[GEO_SPEEDY_ANT_QUEEN], false);
 		break;
-	case GameObject::GO_BEETLE_WORKER:
-		RenderMesh(meshList[GEO_BEETLE_WORKER], false);
+	case GameObject::GO_STRONG_ANT_WORKER:
+		RenderMesh(meshList[GEO_STRONG_ANT_WORKER], false);
 		break;
-	case GameObject::GO_BEETLE_WARRIOR:
-		RenderMesh(meshList[GEO_BEETLE_WARRIOR], false);
+	case GameObject::GO_STRONG_ANT_SOLDIER:
+		RenderMesh(meshList[GEO_STRONG_ANT_SOLDIER], false);
 		break;
-	case GameObject::GO_BEETLE_QUEEN:
-		RenderMesh(meshList[GEO_BEETLE_QUEEN], false);
+	case GameObject::GO_STRONG_ANT_QUEEN:
+		RenderMesh(meshList[GEO_STRONG_ANT_QUEEN], false);
 		break;
 	case GameObject::GO_FOOD:
 		RenderMesh(meshList[GEO_FOOD], false);
@@ -799,44 +849,44 @@ void SceneSandbox::Render()
 
 	// Ant Colony Stats
 	ss.str("");
-	ss << "=== ANT COLONY ===";
+	ss << "=== SPEEDY ANTS COLONY ===";
 	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.3f, 0.3f), 2.5f, 2, 46);
 
 	ss.str("");
-	ss << "Workers: " << m_antWorkerCount;
+	ss << "Workers: " << m_speedyAntWorkerCount;
 	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.5f, 0.5f), 2.5f, 2, 43);
 
 	ss.str("");
-	ss << "Soldiers: " << m_antSoldierCount;
+	ss << "Soldiers: " << m_speedyAntSoldierCount;
 	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.5f, 0.5f), 2.5f, 2, 40);
 
 	ss.str("");
-	ss << "Resources: " << m_antResources;
+	ss << "Resources: " << m_speedyAntResources;
 	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.5f, 0.5f), 2.5f, 2, 37);
 
 	ss.str("");
-	ss << "Queen HP: " << (m_antQueen->active ? static_cast<int>(m_antQueen->health) : 0);
+	ss << "Queen HP: " << (m_speedyAntQueen->active ? static_cast<int>(m_speedyAntQueen->health) : 0);
 	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.5f, 0.5f), 2.5f, 2, 34);
 
 	// Beetle Hive Stats
 	ss.str("");
-	ss << "=== BEETLE HIVE ===";
+	ss << "=== STRONG ANTS COLONY ===";
 	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.3f, 0.3f, 1), 2.5f, 2, 28);
 
 	ss.str("");
-	ss << "Workers: " << m_beetleWorkerCount;
+	ss << "Workers: " << m_strongAntWorkerCount;
 	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.5f, 0.5f, 1), 2.5f, 2, 25);
 
 	ss.str("");
-	ss << "Warriors: " << m_beetleWarriorCount;
+	ss << "Warriors: " << m_strongAntWarriorCount;
 	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.5f, 0.5f, 1), 2.5f, 2, 22);
 
 	ss.str("");
-	ss << "Resources: " << m_beetleResources;
+	ss << "Resources: " << m_strongAntResources;
 	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.5f, 0.5f, 1), 2.5f, 2, 19);
 
 	ss.str("");
-	ss << "Queen HP: " << (m_beetleQueen->active ? static_cast<int>(m_beetleQueen->health) : 0);
+	ss << "Queen HP: " << (m_strongAntQueen->active ? static_cast<int>(m_strongAntQueen->health) : 0);
 	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.5f, 0.5f, 1), 2.5f, 2, 16);
 
 	// Win condition
