@@ -7,6 +7,8 @@
 #include "PostOffice.h"
 #include "ConcreteMessages.h"
 #include <iomanip>
+#include <queue>
+#include <algorithm>
 
 SceneSandbox::SceneSandbox()
 	: m_goList{}, m_spatialGrid{}, m_speed{}, m_worldWidth{}, m_worldHeight{},
@@ -97,28 +99,32 @@ void SceneSandbox::Init()
 	// Spawn Speedy Ant Queen (bottom-left corner)
 	m_speedyAntQueen = FetchGO(GameObject::GO_SPEEDY_ANT_QUEEN);
 	m_speedyAntQueen->teamID = 0;
-	m_speedyAntQueen->pos.Set(m_gridSize * 3.f, m_gridSize * 3.f, 0);
+	m_speedyAntQueen->pos.Set(m_gridSize * 3.f + m_gridOffset, m_gridSize * 3.f + m_gridOffset, 0);
 	m_speedyAntQueen->homeBase = m_speedyAntQueen->pos;
 	m_speedyAntQueen->scale.Set(m_gridSize * 1.5f, m_gridSize * 1.5f, 1.f);
-	m_speedyAntQueen->maxHealth = 50.f;
-	m_speedyAntQueen->health = 50.f;
-	m_speedyAntQueen->attackPower = 0.f;
-	m_speedyAntQueen->moveSpeed = 0.f;
-	m_speedyAntQueen->detectionRange = m_gridSize * 8.f;
-	m_speedyAntQueen->attackRange = 0.f;
+	m_speedyAntQueen->maxHealth = 50.f; m_speedyAntQueen->health = 50.f;
+	m_speedyAntQueen->moveSpeed = 0.f; m_speedyAntQueen->detectionRange = m_gridSize * 8.f;
+
+	m_speedyAntQueen->sm = new StateMachine();
+	m_speedyAntQueen->sm->AddState(new StateQueenSpawning("Spawning", m_speedyAntQueen));
+	m_speedyAntQueen->sm->AddState(new StateQueenEmergency("Emergency", m_speedyAntQueen));
+	m_speedyAntQueen->sm->AddState(new StateQueenCooldown("Cooldown", m_speedyAntQueen));
+	m_speedyAntQueen->sm->SetNextState("Spawning");
 
 	// Spawn Strong Ant Queen (top-right corner)
 	m_strongAntQueen = FetchGO(GameObject::GO_STRONG_ANT_QUEEN);
 	m_strongAntQueen->teamID = 1;
-	m_strongAntQueen->pos.Set(m_gridSize * (m_noGrid - 3.f), m_gridSize * (m_noGrid - 3.f), 0);
+	m_strongAntQueen->pos.Set(m_gridSize * (m_noGrid - 4.f) + m_gridOffset, m_gridSize * (m_noGrid - 4.f) + m_gridOffset, 0);
 	m_strongAntQueen->homeBase = m_strongAntQueen->pos;
 	m_strongAntQueen->scale.Set(m_gridSize * 1.5f, m_gridSize * 1.5f, 1.f);
-	m_strongAntQueen->maxHealth = 50.f;
-	m_strongAntQueen->health = 50.f;
-	m_strongAntQueen->attackPower = 0.f;
-	m_strongAntQueen->moveSpeed = 0.f;
-	m_strongAntQueen->detectionRange = m_gridSize * 8.f;
-	m_strongAntQueen->attackRange = 0.f;
+	m_strongAntQueen->maxHealth = 50.f; m_strongAntQueen->health = 50.f;
+	m_strongAntQueen->moveSpeed = 0.f; m_strongAntQueen->detectionRange = m_gridSize * 8.f;
+
+	m_strongAntQueen->sm = new StateMachine();
+	m_strongAntQueen->sm->AddState(new StateQueenSpawning("Spawning", m_strongAntQueen));
+	m_strongAntQueen->sm->AddState(new StateQueenEmergency("Emergency", m_strongAntQueen));
+	m_strongAntQueen->sm->AddState(new StateQueenCooldown("Cooldown", m_strongAntQueen));
+	m_strongAntQueen->sm->SetNextState("Spawning");
 
 	// Spawn initial workers for both teams
 	for (int i = 0; i < 3; ++i)
@@ -152,34 +158,36 @@ void SceneSandbox::Init()
 	for (int i = 0; i < foodCount; ++i)
 	{
 		GameObject* food = FetchGO(GameObject::GO_FOOD);
-
-		// --- CHANGED: Use Grid Coordinates instead of random floats ---
 		int gridX, gridY;
+		bool validPos = false;
 
-		if (i < foodCount / 2)
+		// Attempt to find valid position
+		while (!validPos)
 		{
-			// Central food zone (Indices approx 30% to 70% of grid)
-			int minC = static_cast<int>(m_noGrid * 0.3f);
-			int maxC = static_cast<int>(m_noGrid * 0.7f);
-			gridX = Math::RandIntMinMax(minC, maxC);
-			gridY = Math::RandIntMinMax(minC, maxC);
-		}
-		else
-		{
-			// Random scattered food (Anywhere within 2 tile padding)
-			gridX = Math::RandIntMinMax(2, m_noGrid - 3);
-			gridY = Math::RandIntMinMax(2, m_noGrid - 3);
+			if (i < foodCount / 2) {
+				int minC = static_cast<int>(m_noGrid * 0.3f);
+				int maxC = static_cast<int>(m_noGrid * 0.7f);
+				gridX = Math::RandIntMinMax(minC, maxC);
+				gridY = Math::RandIntMinMax(minC, maxC);
+			}
+			else {
+				gridX = Math::RandIntMinMax(2, m_noGrid - 3);
+				gridY = Math::RandIntMinMax(2, m_noGrid - 3);
+			}
+
+			// Check walls
+			if (!IsWithinBoundary(gridX) || !IsWithinBoundary(gridY) || m_wallGrid[Get1DIndex(gridX, gridY)])
+				continue;
+
+			// Check Speedy Ant Colony (Bottom-Left approx 0-7)
+			if (gridX <= 8 && gridY <= 8) continue;
+
+			// Check Strong Ant Colony (Top-Right approx 22-29)
+			if (gridX >= 21 && gridY >= 21) continue;
+
+			validPos = true;
 		}
 
-		// Check if inside wall (Basic check)
-		if (IsWithinBoundary(gridX) && IsWithinBoundary(gridY) && m_wallGrid[Get1DIndex(gridX, gridY)])
-		{
-			// Shift slightly if on wall (simple collision resolution)
-			gridX += 1;
-		}
-
-		// Convert Grid Index to World Position
-		// Formula: Index * Size + Offset (Offset = Size/2)
 		float worldX = gridX * m_gridSize + m_gridOffset;
 		float worldY = gridY * m_gridSize + m_gridOffset;
 
@@ -199,19 +207,11 @@ void SceneSandbox::Init()
 
 GameObject* SceneSandbox::FetchGO(GameObject::GAMEOBJECT_TYPE type)
 {
-	for (std::vector<GameObject*>::iterator it = m_goList.begin(); it != m_goList.end(); ++it)
-	{
-		GameObject* go = (GameObject*)*it;
-		if (!go->active && go->type == type)
-		{
-			go->active = true;
-			return go;
-		}
+	for (size_t i = 0; i < m_goList.size(); ++i) {
+		GameObject* go = m_goList[i];
+		if (!go->active && go->type == type) { go->active = true; return go; }
 	}
-
-	// Create new game objects
-	for (unsigned i = 0; i < 10; ++i)
-	{
+	for (unsigned i = 0; i < 10; ++i) {
 		GameObject* go = new GameObject(type);
 		m_goList.push_back(go);
 	}
@@ -224,23 +224,18 @@ void SceneSandbox::SpawnUnit(MessageSpawnUnit::UNIT_TYPE unitType, Vector3 posit
 
 	switch (unitType)
 	{
-		// --- COLONY 1: SPEEDY ANTS (Formerly Ant Worker/Soldier) ---
 	case MessageSpawnUnit::UNIT_SPEEDY_ANT_WORKER:
 		unit = FetchGO(GameObject::GO_SPEEDY_ANT_WORKER);
 		unit->teamID = 0;
 		unit->homeBase = m_speedyAntQueen->pos;
-		unit->maxHealth = 5.f;     // Fragile
-		unit->health = 5.f;
-		unit->attackPower = 0.2f;  // Weak bite
-		unit->moveSpeed = 6.f;     // FAST (Standard was 3)
-		unit->detectionRange = m_gridSize * 7.f;
-		unit->attackRange = m_gridSize * 0.8f;
+		unit->maxHealth = 5.f; unit->health = 5.f; unit->attackPower = 0.2f; unit->moveSpeed = 6.f;
+		unit->detectionRange = m_gridSize * 7.f; unit->attackRange = m_gridSize * 0.8f;
 
 		unit->sm = new StateMachine();
-		unit->sm->AddState(new StateAntWorkerIdle("Idle", unit));
-		unit->sm->AddState(new StateAntWorkerSearching("Searching", unit));
-		unit->sm->AddState(new StateAntWorkerGathering("Gathering", unit));
-		unit->sm->AddState(new StateAntWorkerFleeing("Fleeing", unit));
+		unit->sm->AddState(new StateWorkerIdle("Idle", unit));
+		unit->sm->AddState(new StateWorkerSearching("Searching", unit));
+		unit->sm->AddState(new StateWorkerGathering("Gathering", unit));
+		unit->sm->AddState(new StateWorkerFleeing("Fleeing", unit));
 		unit->sm->SetNextState("Idle");
 		m_speedyAntWorkerCount++;
 		break;
@@ -249,39 +244,30 @@ void SceneSandbox::SpawnUnit(MessageSpawnUnit::UNIT_TYPE unitType, Vector3 posit
 		unit = FetchGO(GameObject::GO_SPEEDY_ANT_SOLDIER);
 		unit->teamID = 0;
 		unit->homeBase = m_speedyAntQueen->pos;
-		unit->maxHealth = 10.f;
-		unit->health = 10.f;
-		unit->attackPower = 1.5f; // Lower damage
-		unit->moveSpeed = 8.f;    // VERY FAST (Standard was 4)
-		unit->detectionRange = m_gridSize * 9.f;
-		unit->attackRange = m_gridSize * 1.2f;
+		unit->maxHealth = 10.f; unit->health = 10.f; unit->attackPower = 1.5f; unit->moveSpeed = 4.f;
+		unit->detectionRange = m_gridSize * 9.f; unit->attackRange = m_gridSize * 1.2f;
 
 		unit->sm = new StateMachine();
-		unit->sm->AddState(new StateSpeedyAntSoldierPatrolling("Patrolling", unit));
-		unit->sm->AddState(new StateSpeedyAntSoldierAttacking("Attacking", unit));
-		unit->sm->AddState(new StateSpeedyAntSoldierDefending("Defending", unit));
-		unit->sm->AddState(new StateSpeedyAntSoldierRetreating("Retreating", unit));
+		unit->sm->AddState(new StateSoldierPatrolling("Patrolling", unit));
+		unit->sm->AddState(new StateSoldierAttacking("Attacking", unit));
+		unit->sm->AddState(new StateSoldierResting("Resting", unit)); // Merged Defending
+		unit->sm->AddState(new StateSoldierRetreating("Retreating", unit));
 		unit->sm->SetNextState("Patrolling");
 		m_speedyAntSoldierCount++;
 		break;
 
-		// --- COLONY 2: STRONG ANTS ---
 	case MessageSpawnUnit::UNIT_STRONG_ANT_WORKER:
 		unit = FetchGO(GameObject::GO_STRONG_ANT_WORKER);
 		unit->teamID = 1;
 		unit->homeBase = m_strongAntQueen->pos;
-		unit->maxHealth = 15.f;    // Tough worker
-		unit->health = 15.f;
-		unit->attackPower = 1.0f;  // Stronger bite
-		unit->moveSpeed = 2.0f;    // SLOW (Standard was 2.5)
-		unit->detectionRange = m_gridSize * 5.f;
-		unit->attackRange = m_gridSize * 0.7f;
+		unit->maxHealth = 15.f; unit->health = 15.f; unit->attackPower = 1.0f; unit->moveSpeed = 3.0f;
+		unit->detectionRange = m_gridSize * 5.f; unit->attackRange = m_gridSize * 0.7f;
 
 		unit->sm = new StateMachine();
-		unit->sm->AddState(new StateStrongAntWorkerIdle("Idle", unit));
-		unit->sm->AddState(new StateStrongAntWorkerForaging("Foraging", unit));
-		unit->sm->AddState(new StateStrongAntWorkerCollecting("Collecting", unit));
-		unit->sm->AddState(new StateStrongAntWorkerEscaping("Escaping", unit));
+		unit->sm->AddState(new StateWorkerIdle("Idle", unit));
+		unit->sm->AddState(new StateWorkerSearching("Searching", unit));
+		unit->sm->AddState(new StateWorkerGathering("Gathering", unit));
+		unit->sm->AddState(new StateWorkerFleeing("Fleeing", unit));
 		unit->sm->SetNextState("Idle");
 		m_strongAntWorkerCount++;
 		break;
@@ -290,29 +276,106 @@ void SceneSandbox::SpawnUnit(MessageSpawnUnit::UNIT_TYPE unitType, Vector3 posit
 		unit = FetchGO(GameObject::GO_STRONG_ANT_SOLDIER);
 		unit->teamID = 1;
 		unit->homeBase = m_strongAntQueen->pos;
-		unit->maxHealth = 30.f;    // Tank
-		unit->health = 30.f;
-		unit->attackPower = 5.0f;  // Heavy Hitter
-		unit->moveSpeed = 3.0f;    // SLOW (Standard was 5)
-		unit->detectionRange = m_gridSize * 6.f;
-		unit->attackRange = m_gridSize * 1.3f;
+		unit->maxHealth = 30.f; unit->health = 30.f; unit->attackPower = 5.0f; unit->moveSpeed = 2.0f;
+		unit->detectionRange = m_gridSize * 6.f; unit->attackRange = m_gridSize * 1.3f;
 
 		unit->sm = new StateMachine();
-		unit->sm->AddState(new StateStrongAntSoldierHunting("Hunting", unit));
-		unit->sm->AddState(new StateStrongAntSoldierCombat("Combat", unit));
-		unit->sm->AddState(new StateStrongAntSoldierResting("Resting", unit));
-		unit->sm->AddState(new StateStrongAntSoldierWithdrawing("Withdrawing", unit));
-		unit->sm->SetNextState("Hunting");
+		unit->sm->AddState(new StateSoldierPatrolling("Patrolling", unit));
+		unit->sm->AddState(new StateSoldierAttacking("Attacking", unit));
+		unit->sm->AddState(new StateSoldierResting("Resting", unit));
+		unit->sm->AddState(new StateSoldierRetreating("Retreating", unit));
+		unit->sm->SetNextState("Patrolling");
 		m_strongAntWarriorCount++;
 		break;
 	}
 
-	if (unit)
-	{
-		unit->pos = position;
-		unit->target = position;
+	if (unit) {
+		int gx = (int)(position.x / m_gridSize);
+		int gy = (int)(position.y / m_gridSize);
+		unit->pos.Set(gx * m_gridSize + m_gridOffset, gy * m_gridSize + m_gridOffset, 0);
+		unit->target = unit->pos;
 		unit->scale.Set(m_gridSize, m_gridSize, 1.f);
 	}
+}
+
+std::vector<MazePt> SceneSandbox::FindPath(MazePt start, MazePt end)
+{
+	std::vector<MazePt> path;
+	if (start.x == end.x && start.y == end.y) return path;
+	if (!IsWithinBoundary(end.x) || !IsWithinBoundary(end.y)) return path;
+	if (m_wallGrid[Get1DIndex(end.x, end.y)]) return path;
+
+	std::vector<bool> visited(m_noGrid * m_noGrid, false);
+	std::vector<int> parent(m_noGrid * m_noGrid, -1);
+	std::queue<MazePt> q;
+
+	q.push(start);
+	visited[Get1DIndex(start.x, start.y)] = true;
+
+	bool found = false;
+	int dx[] = { 0, 0, -1, 1 };
+	int dy[] = { 1, -1, 0, 0 };
+
+	while (!q.empty())
+	{
+		MazePt curr = q.front();
+		q.pop();
+
+		if (curr.x == end.x && curr.y == end.y) { found = true; break; }
+
+		for (int i = 0; i < 4; ++i)
+		{
+			int nx = curr.x + dx[i];
+			int ny = curr.y + dy[i];
+			if (IsWithinBoundary(nx) && IsWithinBoundary(ny))
+			{
+				int nIdx = Get1DIndex(nx, ny);
+				if (!visited[nIdx] && !m_wallGrid[nIdx])
+				{
+					visited[nIdx] = true;
+					parent[nIdx] = Get1DIndex(curr.x, curr.y);
+					q.push(MazePt(nx, ny));
+				}
+			}
+		}
+	}
+
+	if (found) {
+		int currIdx = Get1DIndex(end.x, end.y);
+		int startIdx = Get1DIndex(start.x, start.y);
+		while (currIdx != startIdx) {
+			path.push_back(MazePt(currIdx % m_noGrid, currIdx / m_noGrid));
+			currIdx = parent[currIdx];
+		}
+		std::reverse(path.begin(), path.end());
+	}
+	return path;
+}
+
+// Removed collision logic
+bool SceneSandbox::IsGridOccupied(int gridX, int gridY, GameObject* self)
+{
+	// Only return true if out of bounds or wall. Units do not block each other.
+	if (!IsWithinBoundary(gridX) || !IsWithinBoundary(gridY)) return true;
+	if (m_wallGrid[Get1DIndex(gridX, gridY)]) return true;
+	return false;
+}
+
+MazePt SceneSandbox::GetNearestVacantNeighbor(MazePt target, MazePt start)
+{
+	int dx[] = { 0, 0, -1, 1 };
+	int dy[] = { 1, -1, 0, 0 };
+	MazePt bestPt = target;
+	float minDist = FLT_MAX;
+	for (int i = 0; i < 4; ++i) {
+		int nx = target.x + dx[i];
+		int ny = target.y + dy[i];
+		if (IsWithinBoundary(nx) && IsWithinBoundary(ny) && !m_wallGrid[Get1DIndex(nx, ny)]) {
+			float dist = (float)((nx - start.x) * (nx - start.x) + (ny - start.y) * (ny - start.y));
+			if (dist < minDist) { minDist = dist; bestPt.Set(nx, ny); }
+		}
+	}
+	return bestPt;
 }
 
 void SceneSandbox::Update(double dt)
@@ -384,174 +447,86 @@ void SceneSandbox::Update(double dt)
 	}
 
 	// State machine updates
-	for (std::vector<GameObject*>::iterator it = m_goList.begin(); it != m_goList.end(); ++it)
-	{
-		GameObject* go = (GameObject*)*it;
-		if (!go->active)
-			continue;
-
-		if (go->sm)
-			go->sm->Update(dt * m_speed);
+	for (size_t i = 0; i < m_goList.size(); ++i) {
+		GameObject* go = m_goList[i];
+		if (go->active && go->sm) go->sm->Update(dt * m_speed);
 	}
 
 	// Detection and interaction (optimized with spatial grid)
 	int cycleCheck = 0;
-	for (std::vector<GameObject*>::iterator it = m_goList.begin(); it != m_goList.end(); ++it)
-	{
-		GameObject* go = (GameObject*)*it;
-		if (!go->active)
-			continue;
-
-		// Stagger detection updates
-		if ((cycleCheck % 3) == m_updateCycle)
-		{
+	for (size_t i = 0; i < m_goList.size(); ++i) {
+		GameObject* go = m_goList[i];
+		if (go->active && (cycleCheck % 3) == m_updateCycle) {
 			DetectNearbyEntities(go);
-			if (go->type == GameObject::GO_SPEEDY_ANT_WORKER || go->type == GameObject::GO_STRONG_ANT_WORKER)
-			{
-				FindNearestResource(go);
-			}
+			if (go->type == GameObject::GO_SPEEDY_ANT_WORKER || go->type == GameObject::GO_STRONG_ANT_WORKER) FindNearestResource(go);
 		}
 		cycleCheck++;
 	}
 
 	// Movement
-	for (std::vector<GameObject*>::iterator it = m_goList.begin(); it != m_goList.end(); ++it)
+	for (size_t i = 0; i < m_goList.size(); ++i)
 	{
-		GameObject* go = (GameObject*)*it;
-		if (!go->active || go->moveSpeed <= 0.f)
-			continue;
+		GameObject* go = m_goList[i];
+		if (!go->active || go->moveSpeed <= 0.f) continue;
 
-		// 1. Calculate Vector to Target
-		Vector3 toTarget = go->target - go->pos;
-		float distToTarget = toTarget.Length();
+		int gridX = static_cast<int>(go->pos.x / m_gridSize);
+		int gridY = static_cast<int>(go->pos.y / m_gridSize);
+		int targetGridX = static_cast<int>(go->target.x / m_gridSize);
+		int targetGridY = static_cast<int>(go->target.y / m_gridSize);
 
-		// 2. Identify Current Grid Center
-		int gridX = static_cast<int>((go->pos.x - m_gridOffset + m_gridSize * 0.5f) / m_gridSize);
-		int gridY = static_cast<int>((go->pos.y - m_gridOffset + m_gridSize * 0.5f) / m_gridSize);
+		// Resource Targeting
+		if (!go->targetResource.IsZero() && (go->target - go->targetResource).LengthSquared() < 1.0f) {
+			MazePt startPt(gridX, gridY); MazePt resPt(targetGridX, targetGridY); MazePt adjPt = GetNearestVacantNeighbor(resPt, startPt);
+			targetGridX = adjPt.x; targetGridY = adjPt.y;
+		}
 
-		gridX = Math::Clamp(gridX, 0, m_noGrid - 1);
-		gridY = Math::Clamp(gridY, 0, m_noGrid - 1);
+		gridX = Math::Clamp(gridX, 0, m_noGrid - 1); gridY = Math::Clamp(gridY, 0, m_noGrid - 1);
+		targetGridX = Math::Clamp(targetGridX, 0, m_noGrid - 1); targetGridY = Math::Clamp(targetGridY, 0, m_noGrid - 1);
 
-		Vector3 tileCenter;
-		tileCenter.x = gridX * m_gridSize + m_gridOffset;
-		tileCenter.y = gridY * m_gridSize + m_gridOffset;
-		tileCenter.z = go->pos.z;
+		bool needPath = false;
+		if (go->path.empty()) { if (gridX != targetGridX || gridY != targetGridY) needPath = true; }
+		else { MazePt last = go->path.back(); if (last.x != targetGridX || last.y != targetGridY) needPath = true; }
 
-		// 3. Move Logic
-		float moveStep = go->moveSpeed * static_cast<float>(dt) * m_speed;
-		float distToCenter = (go->pos - tileCenter).Length();
+		if (needPath) {
+			go->path = FindPath(MazePt(gridX, gridY), MazePt(targetGridX, targetGridY));
+			Vector3 center = Vector3(gridX * m_gridSize + m_gridOffset, gridY * m_gridSize + m_gridOffset, go->pos.z);
+			if ((go->pos - center).LengthSquared() > 0.05f) { go->path.insert(go->path.begin(), MazePt(gridX, gridY)); }
+		}
 
-		// If we are at the tile center (or close enough)
-		if (distToCenter < moveStep)
+		float step = go->moveSpeed * static_cast<float>(dt) * m_speed;
+
+		if (!go->path.empty())
 		{
-			go->pos = tileCenter; // Snap to center
-
-			if (distToTarget < m_gridSize * 0.5f)
-			{
-				go->pos = go->target; // Arrived at destination
-			}
-			else
-			{
-				// Manhattan Movement with Collision Avoidance
-				Vector3 moveDir(0, 0, 0);
-				int nextX = gridX;
-				int nextY = gridY;
-
-				bool preferX = (abs(toTarget.x) >= abs(toTarget.y));
-
-				// Attempt Preferred Direction
-				if (preferX) nextX += (toTarget.x > 0) ? 1 : -1;
-				else nextY += (toTarget.y > 0) ? 1 : -1;
-
-				bool blocked = false;
-				if (IsWithinBoundary(nextX) && IsWithinBoundary(nextY))
-				{
-					if (m_wallGrid[Get1DIndex(nextX, nextY)]) blocked = true;
-				}
-				else blocked = true; // blocked by boundary (or stay in bounds)
-
-				if (blocked)
-				{
-					// Try the alternate axis (Slide along wall)
-					nextX = gridX;
-					nextY = gridY;
-					if (!preferX) nextX += (toTarget.x > 0) ? 1 : -1; // Switch to X
-					else nextY += (toTarget.y > 0) ? 1 : -1; // Switch to Y
-
-					if (IsWithinBoundary(nextX) && IsWithinBoundary(nextY) &&
-						!m_wallGrid[Get1DIndex(nextX, nextY)])
-					{
-						// Alternate is free
-						if (!preferX) moveDir.x = (toTarget.x > 0) ? 1.f : -1.f;
-						else moveDir.y = (toTarget.y > 0) ? 1.f : -1.f;
-					}
-					else
-					{
-						// Both blocked: Stand still (moveDir remains 0)
-					}
-				}
-				else
-				{
-					// Preferred is free
-					if (preferX) moveDir.x = (toTarget.x > 0) ? 1.f : -1.f;
-					else moveDir.y = (toTarget.y > 0) ? 1.f : -1.f;
-				}
-
-				go->pos += moveDir * moveStep;
-			}
+			MazePt nextPt = go->path.front();
+			// Collision Removed: Units can stack
+			Vector3 nextPos(nextPt.x * m_gridSize + m_gridOffset, nextPt.y * m_gridSize + m_gridOffset, go->pos.z);
+			Vector3 dir = nextPos - go->pos;
+			float dist = dir.Length();
+			if (dist <= step) { go->pos = nextPos; go->path.erase(go->path.begin()); }
+			else { go->pos += dir.Normalized() * step; }
 		}
 		else
 		{
-			// In Transit - Lock to axis
-			float offsetX = abs(go->pos.x - tileCenter.x);
-			float offsetY = abs(go->pos.y - tileCenter.y);
-			Vector3 moveDir(0, 0, 0);
-
-			if (offsetX > offsetY) // Moving X
-				moveDir.x = (toTarget.x > 0) ? 1.f : -1.f;
-			else // Moving Y
-				moveDir.y = (toTarget.y > 0) ? 1.f : -1.f;
-
-			go->pos += moveDir * moveStep;
+			Vector3 center = Vector3(gridX * m_gridSize + m_gridOffset, gridY * m_gridSize + m_gridOffset, go->pos.z);
+			if ((go->pos - center).LengthSquared() > 0.001f) {
+				Vector3 dir = center - go->pos; float dist = dir.Length();
+				if (dist <= step) go->pos = center; else go->pos += dir.Normalized() * step;
+			}
 		}
-
-		// Boundary check
-		go->pos.x = Math::Clamp(go->pos.x, m_gridOffset, (m_noGrid - 1) * m_gridSize + m_gridOffset);
-		go->pos.y = Math::Clamp(go->pos.y, m_gridOffset, (m_noGrid - 1) * m_gridSize + m_gridOffset);
 	}
 
 	// Update counts
-	m_speedyAntWorkerCount = 0;
-	m_speedyAntSoldierCount = 0;
-	m_strongAntWorkerCount = 0;
-	m_strongAntWarriorCount = 0;
 	int totalObjects = 0;
-
-	for (std::vector<GameObject*>::iterator it = m_goList.begin(); it != m_goList.end(); ++it)
-	{
-		GameObject* go = (GameObject*)*it;
-		if (!go->active)
-			continue;
-
+	m_speedyAntWorkerCount = 0; m_speedyAntSoldierCount = 0; m_strongAntWorkerCount = 0; m_strongAntWarriorCount = 0;
+	for (size_t i = 0; i < m_goList.size(); ++i) {
+		GameObject* go = m_goList[i];
+		if (!go->active) continue;
 		totalObjects++;
-
-		switch (go->type)
-		{
-		case GameObject::GO_SPEEDY_ANT_WORKER:
-			m_speedyAntWorkerCount++;
-			break;
-		case GameObject::GO_SPEEDY_ANT_SOLDIER:
-			m_speedyAntSoldierCount++;
-			break;
-		case GameObject::GO_STRONG_ANT_WORKER:
-			m_strongAntWorkerCount++;
-			break;
-		case GameObject::GO_STRONG_ANT_SOLDIER:
-			m_strongAntWarriorCount++;
-			break;
-		}
+		if (go->type == GameObject::GO_SPEEDY_ANT_WORKER) m_speedyAntWorkerCount++;
+		else if (go->type == GameObject::GO_SPEEDY_ANT_SOLDIER) m_speedyAntSoldierCount++;
+		else if (go->type == GameObject::GO_STRONG_ANT_WORKER) m_strongAntWorkerCount++;
+		else if (go->type == GameObject::GO_STRONG_ANT_SOLDIER) m_strongAntWarriorCount++;
 	}
-
 	SceneData::GetInstance()->SetObjectCount(totalObjects);
 }
 
@@ -708,94 +683,67 @@ int SceneSandbox::Get1DIndex(int x, int y) const
 bool SceneSandbox::Handle(Message* message)
 {
 	MessageSpawnUnit* msgSpawn = dynamic_cast<MessageSpawnUnit*>(message);
-	if (msgSpawn)
-	{
-		SpawnUnit(msgSpawn->type, msgSpawn->position, msgSpawn->spawner->teamID);
+	if (msgSpawn) {
+		// Define Costs
+		int cost = 0;
+		if (msgSpawn->type == MessageSpawnUnit::UNIT_SPEEDY_ANT_SOLDIER || msgSpawn->type == MessageSpawnUnit::UNIT_STRONG_ANT_SOLDIER)
+			cost = 5;
+		else
+			cost = 2;
+
+		// Check and Deduct Resources
+		bool spawned = false;
+		if (msgSpawn->spawner->teamID == 0) { // Speedy
+			if (m_speedyAntResources >= cost) {
+				m_speedyAntResources -= cost;
+				SpawnUnit(msgSpawn->type, msgSpawn->position, 0);
+				spawned = true;
+			}
+		}
+		else { // Strong
+			if (m_strongAntResources >= cost) {
+				m_strongAntResources -= cost;
+				SpawnUnit(msgSpawn->type, msgSpawn->position, 1);
+				spawned = true;
+			}
+		}
+		// If resource check failed, we just ignore the request. The Queen will try again later.
 		return true;
 	}
 
 	MessageResourceDelivered* msgResource = dynamic_cast<MessageResourceDelivered*>(message);
-	if (msgResource)
-	{
-		if (msgResource->teamID == 0)
-			m_speedyAntResources += msgResource->resourceAmount;
-		else
-			m_strongAntResources += msgResource->resourceAmount;
-		return true;
-	}
+	if (msgResource) { if (msgResource->teamID == 0) m_speedyAntResources += msgResource->resourceAmount; else m_strongAntResources += msgResource->resourceAmount; return true; }
+	MessageUnitDied* msgDied = dynamic_cast<MessageUnitDied*>(message); if (msgDied) { return true; }
+	MessageResourceFound* msgFound = dynamic_cast<MessageResourceFound*>(message); if (msgFound) { return true; }
 
-	MessageUnitDied* msgDied = dynamic_cast<MessageUnitDied*>(message);
-	if (msgDied)
-	{
-		// Update counts handled in Update()
-		return true;
-	}
-
-	MessageResourceFound* msgFound = dynamic_cast<MessageResourceFound*>(message);
-	if (msgFound)
-	{
-		// Can implement shared resource knowledge here
-		return true;
-	}
-
+	// FIX: Loop safely here too
 	MessageEnemySpotted* msgEnemy = dynamic_cast<MessageEnemySpotted*>(message);
-	if (msgEnemy)
-	{
-		// Alert nearby allies
-		for (std::vector<GameObject*>::iterator it = m_goList.begin(); it != m_goList.end(); ++it)
-		{
-			GameObject* go = (GameObject*)*it;
-			if (!go->active || go->teamID != msgEnemy->teamID)
-				continue;
-
-			// Soldiers/Warriors respond to enemy sightings
-			if ((go->type == GameObject::GO_SPEEDY_ANT_SOLDIER || go->type == GameObject::GO_STRONG_ANT_SOLDIER) &&
-				(go->pos - msgEnemy->enemy->pos).LengthSquared() < go->detectionRange * go->detectionRange * 2.f)
-			{
-				go->targetEnemy = msgEnemy->enemy;
-			}
+	if (msgEnemy) {
+		for (size_t i = 0; i < m_goList.size(); ++i) {
+			GameObject* go = m_goList[i];
+			if (!go->active || go->teamID != msgEnemy->teamID) continue;
+			if ((go->type == GameObject::GO_SPEEDY_ANT_SOLDIER || go->type == GameObject::GO_STRONG_ANT_SOLDIER) && (go->pos - msgEnemy->enemy->pos).LengthSquared() < go->detectionRange * go->detectionRange * 2.f) { go->targetEnemy = msgEnemy->enemy; }
 		}
 		return true;
 	}
-
 	MessageRequestHelp* msgHelp = dynamic_cast<MessageRequestHelp*>(message);
-	if (msgHelp)
-	{
-		// Nearby soldiers respond
-		for (std::vector<GameObject*>::iterator it = m_goList.begin(); it != m_goList.end(); ++it)
-		{
-			GameObject* go = (GameObject*)*it;
-			if (!go->active || go->teamID != msgHelp->teamID)
-				continue;
-
-			if ((go->type == GameObject::GO_SPEEDY_ANT_SOLDIER || go->type == GameObject::GO_STRONG_ANT_SOLDIER) &&
-				(go->pos - msgHelp->position).LengthSquared() < m_gridSize * m_gridSize * 64.f)
-			{
-				go->target = msgHelp->position;
-			}
+	if (msgHelp) {
+		for (size_t i = 0; i < m_goList.size(); ++i) {
+			GameObject* go = m_goList[i];
+			if (!go->active || go->teamID != msgHelp->teamID) continue;
+			if ((go->type == GameObject::GO_SPEEDY_ANT_SOLDIER || go->type == GameObject::GO_STRONG_ANT_SOLDIER) && (go->pos - msgHelp->position).LengthSquared() < m_gridSize * m_gridSize * 64.f) { go->target = msgHelp->position; }
 		}
 		return true;
 	}
-
 	MessageQueenThreat* msgQueen = dynamic_cast<MessageQueenThreat*>(message);
-	if (msgQueen)
-	{
-		// All military units return to defend queen
-		for (std::vector<GameObject*>::iterator it = m_goList.begin(); it != m_goList.end(); ++it)
-		{
-			GameObject* go = (GameObject*)*it;
-			if (!go->active || go->teamID != msgQueen->teamID)
-				continue;
-
-			if (go->type == GameObject::GO_SPEEDY_ANT_SOLDIER || go->type == GameObject::GO_STRONG_ANT_SOLDIER)
-			{
-				go->target = msgQueen->queen->pos;
-				go->targetEnemy = msgQueen->queen->targetEnemy;
-			}
+	if (msgQueen) {
+		for (size_t i = 0; i < m_goList.size(); ++i) {
+			GameObject* go = m_goList[i];
+			if (!go->active || go->teamID != msgQueen->teamID) continue;
+			if (go->type == GameObject::GO_SPEEDY_ANT_SOLDIER || go->type == GameObject::GO_STRONG_ANT_SOLDIER) { go->target = msgQueen->queen->pos; go->targetEnemy = msgQueen->queen->targetEnemy; }
 		}
 		return true;
 	}
-
 	return false;
 }
 

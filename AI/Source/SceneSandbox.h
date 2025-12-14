@@ -21,6 +21,7 @@ public:
 
 	GameObject* FetchGO(GameObject::GAMEOBJECT_TYPE type);
 	void SpawnUnit(MessageSpawnUnit::UNIT_TYPE unitType, Vector3 position, int teamID);
+	std::vector<MazePt> FindPath(MazePt start, MazePt end);
 protected:
 	// Helper functions
 	int IsWithinBoundary(int x) const;
@@ -33,7 +34,7 @@ protected:
 
 	// Game state
 	std::vector<GameObject*> m_goList;
-	std::map<int, std::vector<GameObject*>> m_spatialGrid; // For optimization
+	std::map<int, std::vector<GameObject*>> m_spatialGrid;
 	float m_speed;
 	float m_worldWidth;
 	float m_worldHeight;
@@ -42,6 +43,8 @@ protected:
 	float m_gridOffset;
 
 	std::vector<bool> m_wallGrid;
+	bool IsGridOccupied(int gridX, int gridY, GameObject* self);
+	MazePt GetNearestVacantNeighbor(MazePt target, MazePt start);
 
 	// Team statistics
 	int m_speedyAntWorkerCount;

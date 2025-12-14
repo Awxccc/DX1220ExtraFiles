@@ -247,12 +247,12 @@ void SceneMaze::Render()
 	ss << "Press SPACE to speed up";
 	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0, 1, 0), 3, 50, 6);
 
-	// Exercise Week 07 - Render “Num Move” in the right panel using m_maze.GetNumMove()
+	// Exercise Week 07 - Render ï¿½Num Moveï¿½ in the right panel using m_maze.GetNumMove()
 	ss.str("");
 	ss << "Num Move:" << m_maze.GetNumMove();
 	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0, 1, 0), 3, 50, 3);
 
-	// Exercise Week 07 - Render the maze key in the right panal e.g. “Maze 0” or “Maze 8”
+	// Exercise Week 07 - Render the maze key in the right panal e.g. ï¿½Maze 0ï¿½ or ï¿½Maze 8ï¿½
 	ss.str("");
 	ss << "Maze " << m_maze.GetKey();
 	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0, 1, 0), 3, 50, 0);
