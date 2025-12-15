@@ -97,7 +97,7 @@ void SceneSandbox::Init()
 	m_updateCycle = 0;
 
 	// Spawn Speedy Ant Queen (bottom-left corner)
-	m_speedyAntQueen = FetchGO(GameObject::GO_SPEEDY_ANT_QUEEN);
+	m_speedyAntQueen = FetchGO(GameObject::GO_QUEEN);
 	m_speedyAntQueen->teamID = 0;
 	m_speedyAntQueen->pos.Set(m_gridSize * 3.f + m_gridOffset, m_gridSize * 3.f + m_gridOffset, 0);
 	m_speedyAntQueen->homeBase = m_speedyAntQueen->pos;
@@ -226,7 +226,7 @@ void SceneSandbox::SpawnUnit(MessageSpawnUnit::UNIT_TYPE unitType, Vector3 posit
 	switch (unitType)
 	{
 	case MessageSpawnUnit::UNIT_SPEEDY_ANT_WORKER:
-		unit = FetchGO(GameObject::GO_SPEEDY_ANT_WORKER);
+		unit = FetchGO(GameObject::GO_WORKER);
 		unit->teamID = 0;
 		unit->homeBase = m_speedyAntQueen->pos;
 		unit->maxHealth = 5.f; unit->health = 5.f; unit->attackPower = 0.2f; unit->moveSpeed = 6.f; unit->baseSpeed = 6.f;
@@ -242,7 +242,7 @@ void SceneSandbox::SpawnUnit(MessageSpawnUnit::UNIT_TYPE unitType, Vector3 posit
 		break;
 
 	case MessageSpawnUnit::UNIT_SPEEDY_ANT_SOLDIER:
-		unit = FetchGO(GameObject::GO_SPEEDY_ANT_SOLDIER);
+		unit = FetchGO(GameObject::GO_SOLDIER);
 		unit->teamID = 0;
 		unit->homeBase = m_speedyAntQueen->pos;
 		unit->maxHealth = 10.f; unit->health = 10.f; unit->attackPower = 1.5f; unit->moveSpeed = 4.f; unit->baseSpeed = 4.f;
@@ -258,7 +258,7 @@ void SceneSandbox::SpawnUnit(MessageSpawnUnit::UNIT_TYPE unitType, Vector3 posit
 		break;
 
 	case MessageSpawnUnit::UNIT_STRONG_ANT_WORKER:
-		unit = FetchGO(GameObject::GO_STRONG_ANT_WORKER);
+		unit = FetchGO(GameObject::GO_WORKER);
 		unit->teamID = 1;
 		unit->homeBase = m_strongAntQueen->pos;
 		unit->maxHealth = 15.f; unit->health = 15.f; unit->attackPower = 1.0f; unit->moveSpeed = 3.0f; unit->baseSpeed = 3.f;
@@ -274,7 +274,7 @@ void SceneSandbox::SpawnUnit(MessageSpawnUnit::UNIT_TYPE unitType, Vector3 posit
 		break;
 
 	case MessageSpawnUnit::UNIT_STRONG_ANT_SOLDIER:
-		unit = FetchGO(GameObject::GO_STRONG_ANT_SOLDIER);
+		unit = FetchGO(GameObject::GO_SOLDIER);
 		unit->teamID = 1;
 		unit->homeBase = m_strongAntQueen->pos;
 		unit->maxHealth = 30.f; unit->health = 30.f; unit->attackPower = 5.0f; unit->moveSpeed = 2.0f; unit->baseSpeed = 2.f;
@@ -496,7 +496,7 @@ void SceneSandbox::Update(double dt)
 		GameObject* go = m_goList[i];
 		if (go->active && (cycleCheck % 3) == m_updateCycle) {
 			DetectNearbyEntities(go);
-			if (go->type == GameObject::GO_SPEEDY_ANT_WORKER || go->type == GameObject::GO_STRONG_ANT_WORKER)
+			if (go->type == GameObject::GO_WORKER || go->type == GameObject::GO_STRONG_ANT_WORKER)
 				FindNearestResource(go);
 			if (go->type == GameObject::GO_HEALER)
 				FindNearestInjuredAlly(go);
@@ -574,10 +574,14 @@ void SceneSandbox::Update(double dt)
 		GameObject* go = m_goList[i];
 		if (!go->active) continue;
 		totalObjects++;
-		if (go->type == GameObject::GO_SPEEDY_ANT_WORKER) m_speedyAntWorkerCount++;
-		else if (go->type == GameObject::GO_SPEEDY_ANT_SOLDIER) m_speedyAntSoldierCount++;
-		else if (go->type == GameObject::GO_STRONG_ANT_WORKER) m_strongAntWorkerCount++;
-		else if (go->type == GameObject::GO_STRONG_ANT_SOLDIER) m_strongAntWarriorCount++;
+		if (go->type == GameObject::GO_WORKER) {
+			if (go->teamID == 0) m_speedyAntWorkerCount++;
+			else m_strongAntWorkerCount++;
+		}
+		else if (go->type == GameObject::GO_SOLDIER) {
+			if (go->teamID == 0) m_speedyAntSoldierCount++;
+			else m_strongAntWarriorCount++;
+		}
 	}
 	SceneData::GetInstance()->SetObjectCount(totalObjects);
 }
@@ -585,7 +589,7 @@ void SceneSandbox::Update(double dt)
 void SceneSandbox::DetectNearbyEntities(GameObject* go)
 {
 	if (go->type == GameObject::GO_FOOD ||
-		go->type == GameObject::GO_SPEEDY_ANT_QUEEN ||
+		go->type == GameObject::GO_QUEEN ||
 		go->type == GameObject::GO_STRONG_ANT_QUEEN)
 		return;
 
@@ -631,7 +635,7 @@ void SceneSandbox::DetectNearbyEntities(GameObject* go)
 						go->targetEnemy = other;
 
 						// Queens detect threats
-						if (go->type == GameObject::GO_SPEEDY_ANT_QUEEN && other->teamID == 1)
+						if (go->type == GameObject::GO_QUEEN && other->teamID == 1)
 						{
 							go->targetEnemy = other;
 						}
@@ -787,7 +791,7 @@ bool SceneSandbox::Handle(Message* message)
 		for (size_t i = 0; i < m_goList.size(); ++i) {
 			GameObject* go = m_goList[i];
 			if (!go->active || go->teamID != msgEnemy->teamID) continue;
-			if ((go->type == GameObject::GO_SPEEDY_ANT_SOLDIER || go->type == GameObject::GO_STRONG_ANT_SOLDIER) && (go->pos - msgEnemy->enemy->pos).LengthSquared() < go->detectionRange * go->detectionRange * 2.f) { go->targetEnemy = msgEnemy->enemy; }
+			if ((go->type == GameObject::GO_SOLDIER || go->type == GameObject::GO_STRONG_ANT_SOLDIER) && (go->pos - msgEnemy->enemy->pos).LengthSquared() < go->detectionRange * go->detectionRange * 2.f) { go->targetEnemy = msgEnemy->enemy; }
 		}
 		return true;
 	}
@@ -796,7 +800,7 @@ bool SceneSandbox::Handle(Message* message)
 		for (size_t i = 0; i < m_goList.size(); ++i) {
 			GameObject* go = m_goList[i];
 			if (!go->active || go->teamID != msgHelp->teamID) continue;
-			if ((go->type == GameObject::GO_SPEEDY_ANT_SOLDIER || go->type == GameObject::GO_STRONG_ANT_SOLDIER) && (go->pos - msgHelp->position).LengthSquared() < m_gridSize * m_gridSize * 64.f) { go->target = msgHelp->position; }
+			if ((go->type == GameObject::GO_SOLDIER || go->type == GameObject::GO_STRONG_ANT_SOLDIER) && (go->pos - msgHelp->position).LengthSquared() < m_gridSize * m_gridSize * 64.f) { go->target = msgHelp->position; }
 		}
 		return true;
 	}
@@ -805,7 +809,7 @@ bool SceneSandbox::Handle(Message* message)
 		for (size_t i = 0; i < m_goList.size(); ++i) {
 			GameObject* go = m_goList[i];
 			if (!go->active || go->teamID != msgQueen->teamID) continue;
-			if (go->type == GameObject::GO_SPEEDY_ANT_SOLDIER || go->type == GameObject::GO_STRONG_ANT_SOLDIER) { go->target = msgQueen->queen->pos; go->targetEnemy = msgQueen->queen->targetEnemy; }
+			if (go->type == GameObject::GO_SOLDIER || go->type == GameObject::GO_STRONG_ANT_SOLDIER) { go->target = msgQueen->queen->pos; go->targetEnemy = msgQueen->queen->targetEnemy; }
 		}
 		return true;
 	}
@@ -822,23 +826,17 @@ void SceneSandbox::RenderGO(GameObject* go)
 
 	switch (go->type)
 	{
-	case GameObject::GO_SPEEDY_ANT_WORKER:
-		RenderMesh(meshList[GEO_SPEEDY_ANT_WORKER], false);
+	case GameObject::GO_WORKER:
+		if (go->teamID == 0) RenderMesh(meshList[GEO_SPEEDY_ANT_WORKER], false);
+		else RenderMesh(meshList[GEO_STRONG_ANT_WORKER], false);
 		break;
-	case GameObject::GO_SPEEDY_ANT_SOLDIER:
-		RenderMesh(meshList[GEO_SPEEDY_ANT_SOLDIER], false);
+	case GameObject::GO_SOLDIER:
+		if (go->teamID == 0) RenderMesh(meshList[GEO_SPEEDY_ANT_SOLDIER], false);
+		else RenderMesh(meshList[GEO_STRONG_ANT_SOLDIER], false);
 		break;
-	case GameObject::GO_SPEEDY_ANT_QUEEN:
-		RenderMesh(meshList[GEO_SPEEDY_ANT_QUEEN], false);
-		break;
-	case GameObject::GO_STRONG_ANT_WORKER:
-		RenderMesh(meshList[GEO_STRONG_ANT_WORKER], false);
-		break;
-	case GameObject::GO_STRONG_ANT_SOLDIER:
-		RenderMesh(meshList[GEO_STRONG_ANT_SOLDIER], false);
-		break;
-	case GameObject::GO_STRONG_ANT_QUEEN:
-		RenderMesh(meshList[GEO_STRONG_ANT_QUEEN], false);
+	case GameObject::GO_QUEEN:
+		if (go->teamID == 0) RenderMesh(meshList[GEO_SPEEDY_ANT_QUEEN], false);
+		else RenderMesh(meshList[GEO_STRONG_ANT_QUEEN], false);
 		break;
 	case GameObject::GO_HEALER:
 		RenderMesh(meshList[GEO_WHITEQUAD], false);
