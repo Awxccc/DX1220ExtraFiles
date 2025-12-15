@@ -736,9 +736,19 @@ bool SceneSandbox::Handle(Message* message) {
 		case MessageSpawnUnit::UNIT_SPEEDY_ANT_SOLDIER:
 		case MessageSpawnUnit::UNIT_STRONG_ANT_SOLDIER:
 			cost = 5;
+			limit = 15;
+			currentCount = (msgSpawn->spawner->teamID == 0) ? m_redSoldierCount : m_blueSoldierCount;
 			break;
-		case MessageSpawnUnit::UNIT_HEALER: cost = 8; break;
-		case MessageSpawnUnit::UNIT_TANK: cost = 10; break;
+		case MessageSpawnUnit::UNIT_HEALER:
+			cost = 8;
+			limit = 5;
+			currentCount = (msgSpawn->spawner->teamID == 0) ? m_redHealerCount : m_blueHealerCount;
+			break;
+		case MessageSpawnUnit::UNIT_TANK:
+			cost = 10;
+			limit = 5;
+			currentCount = (msgSpawn->spawner->teamID == 0) ? m_redTankCount : m_blueTankCount;
+			break;
 		}
 
 		if (currentCount >= limit) return true; // Reached limit

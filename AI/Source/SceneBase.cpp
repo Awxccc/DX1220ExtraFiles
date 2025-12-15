@@ -177,7 +177,7 @@ void SceneBase::Init()
 	meshList[GEO_PIPE]->textureID = LoadTGA("Image//pipe-green.tga");
 
 	//Assignment 1
-	meshList[GEO_SPEEDY_ANT_WORKER] = MeshBuilder::GenerateQuad("speedyAntworker", Color(0, 0, 0));
+	meshList[GEO_SPEEDY_ANT_WORKER] = MeshBuilder::GenerateQuad("speedyAntworker", Color(0, 1, 0));
 	meshList[GEO_SPEEDY_ANT_WORKER]->textureID = LoadTGA("Image//speedyAntworker.tga");
 	meshList[GEO_SPEEDY_ANT_SOLDIER] = MeshBuilder::GenerateQuad("speedyAntsoldier", Color(1, 0, 0));
 	meshList[GEO_SPEEDY_ANT_SOLDIER]->textureID = LoadTGA("Image//speedyAntsoldier.tga");

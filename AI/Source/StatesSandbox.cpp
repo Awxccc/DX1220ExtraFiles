@@ -25,12 +25,52 @@ void ResetGlobalSandboxVars() {
 	std::fill(g_visitedNodes[0].begin(), g_visitedNodes[0].end(), false);
 	std::fill(g_visitedNodes[1].begin(), g_visitedNodes[1].end(), false);
 }
+Vector3 GetRandomPerimeterPos(int teamID)
+{
+	float gridSize = SceneData::GetInstance()->GetGridSize();
+	float offset = SceneData::GetInstance()->GetGridOffset();
+	int nX, nY;
 
-// ... [Keep GetRandomExplorationTarget, MarkVisited, GetRandomEntrance, GetRandomGridPosAround as is] ...
-Vector3 GetRandomExplorationTarget(Vector3 center, int teamID) { /* Keep existing code */ return Vector3(0, 0, 0); /*placeholder for brevity*/ }
-void MarkVisited(Vector3 pos, int teamID) { /* Keep existing code */ }
-Vector3 GetRandomEntrance(int teamID) { /* Keep existing code */ return Vector3(0, 0, 0); /*placeholder*/ }
-Vector3 GetRandomGridPosAround(Vector3 center, float range) { /* Keep existing code */ return Vector3(0, 0, 0); /*placeholder*/ }
+	// Red Colony is approx 0-7. Walls at 7. Perimeter is 8-12.
+	// Blue Colony is approx 22-29. Walls at 22. Perimeter is 17-21.
+
+	if (teamID == 0) // RED (Bottom-Left)
+	{
+		// Randomly choose "Right side" or "Top side" of the perimeter
+		if (Math::RandIntMinMax(0, 1) == 0) {
+			nX = Math::RandIntMinMax(8, 12); // Outside right wall
+			nY = Math::RandIntMinMax(0, 12); // Along the height
+		}
+		else {
+			nX = Math::RandIntMinMax(0, 12); // Along the width
+			nY = Math::RandIntMinMax(8, 12); // Outside top wall
+		}
+	}
+	else // BLUE (Top-Right)
+	{
+		int maxG = SceneData::GetInstance()->GetNumGrid() - 1;
+		// Randomly choose "Left side" or "Bottom side" of the perimeter
+		if (Math::RandIntMinMax(0, 1) == 0) {
+			nX = Math::RandIntMinMax(17, 21); // Outside left wall
+			nY = Math::RandIntMinMax(17, maxG);
+		}
+		else {
+			nX = Math::RandIntMinMax(17, maxG);
+			nY = Math::RandIntMinMax(17, 21); // Outside bottom wall
+		}
+	}
+
+	// Clamp to map bounds
+	int gridNum = SceneData::GetInstance()->GetNumGrid();
+	nX = Math::Clamp(nX, 0, gridNum - 1);
+	nY = Math::Clamp(nY, 0, gridNum - 1);
+
+	return Vector3(nX * gridSize + offset, nY * gridSize + offset, 0);
+}
+Vector3 GetRandomExplorationTarget(Vector3 center, int teamID) { ResizeVisitedNodes(); float gridSize = SceneData::GetInstance()->GetGridSize(); float offset = SceneData::GetInstance()->GetGridOffset(); int gridNum = SceneData::GetInstance()->GetNumGrid(); for (int i = 0; i < 10; ++i) { int nX = Math::RandIntMinMax(0, gridNum - 1); int nY = Math::RandIntMinMax(0, gridNum - 1); int idx = nY * gridNum + nX; if (!g_visitedNodes[teamID][idx]) { return Vector3(nX * gridSize + offset, nY * gridSize + offset, 0); } } int nX = Math::RandIntMinMax(0, gridNum - 1); int nY = Math::RandIntMinMax(0, gridNum - 1); return Vector3(nX * gridSize + offset, nY * gridSize + offset, 0); }
+void MarkVisited(Vector3 pos, int teamID) { ResizeVisitedNodes(); int gridNum = SceneData::GetInstance()->GetNumGrid(); int gx = (int)(pos.x / SceneData::GetInstance()->GetGridSize()); int gy = (int)(pos.y / SceneData::GetInstance()->GetGridSize()); if (gx >= 0 && gx < gridNum && gy >= 0 && gy < gridNum) { g_visitedNodes[teamID][gy * gridNum + gx] = true; } }
+Vector3 GetRandomEntrance(int teamID) { float gridSize = SceneData::GetInstance()->GetGridSize(); float offset = SceneData::GetInstance()->GetGridOffset(); int gx, gy; int choice = Math::RandIntMinMax(0, 3); if (teamID == 0) { if (choice == 0) { gx = 3; gy = 7; } else if (choice == 1) { gx = 4; gy = 7; } else if (choice == 2) { gx = 7; gy = 3; } else { gx = 7; gy = 4; } } else { if (choice == 0) { gx = 26; gy = 22; } else if (choice == 1) { gx = 27; gy = 22; } else if (choice == 2) { gx = 22; gy = 26; } else { gx = 22; gy = 27; } } return Vector3(gx * gridSize + offset, gy * gridSize + offset, 0); }
+Vector3 GetRandomGridPosAround(Vector3 center, float range) { float gridSize = SceneData::GetInstance()->GetGridSize(); float offset = SceneData::GetInstance()->GetGridOffset(); int gridNum = SceneData::GetInstance()->GetNumGrid(); int cX = (int)(center.x / gridSize); int cY = (int)(center.y / gridSize); int r = (int)range; int nX = Math::Clamp(Math::RandIntMinMax(cX - r, cX + r), 0, gridNum - 1); int nY = Math::Clamp(Math::RandIntMinMax(cY - r, cY + r), 0, gridNum - 1); return Vector3(nX * gridSize + offset, nY * gridSize + offset, 0); }
 
 // ================= WORKER STATES (Keep Unchanged) =================
 // ... [StateWorkerIdle, StateWorkerSearching, StateWorkerGathering, StateWorkerFleeing implementation unchanged] ...
@@ -73,26 +113,15 @@ StateSoldierPatrolling::~StateSoldierPatrolling() {}
 void StateSoldierPatrolling::Enter() { m_go->moveSpeed = m_go->baseSpeed; patrolTimer = 0.f; patrolTarget.SetZero(); }
 void StateSoldierPatrolling::Update(double dt) {
 	patrolTimer += (float)dt;
-	if (m_go->targetEnemy && m_go->targetEnemy->active) {
-		PostOffice::GetInstance()->Send("Scene", new MessageEnemySpotted(m_go, m_go->targetEnemy, m_go->teamID));
-		m_go->sm->SetNextState("Attacking");
-		return;
-	}
+	if (m_go->targetEnemy && m_go->targetEnemy->active) { PostOffice::GetInstance()->Send("Scene", new MessageEnemySpotted(m_go, m_go->targetEnemy, m_go->teamID)); m_go->sm->SetNextState("Attacking"); return; }
 
-	// --- NEW: ATTACK COLONY IF FOUND ---
-	if (g_enemyColonyFound[m_go->teamID]) {
-		m_go->target = g_enemyColonyPos[m_go->teamID];
-		// Reset patrol timer to prevent interference, just march
+	// --- FIX: USE PERIMETER PATROL ---
+	if (patrolTimer > 4.f || patrolTarget.IsZero() || (m_go->pos - m_go->target).LengthSquared() < 0.5f) {
 		patrolTimer = 0.f;
+		patrolTarget = GetRandomPerimeterPos(m_go->teamID);
+		m_go->target = patrolTarget;
 	}
-	else {
-		// Standard Patrol Logic
-		if (patrolTimer > 4.f || patrolTarget.IsZero() || (m_go->pos - m_go->target).LengthSquared() < 0.5f) {
-			patrolTimer = 0.f;
-			patrolTarget = GetRandomEntrance(m_go->teamID);
-			m_go->target = patrolTarget;
-		}
-	}
+	// ---------------------------------
 }
 void StateSoldierPatrolling::Exit() {}
 
@@ -100,37 +129,15 @@ StateSoldierAttacking::StateSoldierAttacking(const std::string& stateID, GameObj
 StateSoldierAttacking::~StateSoldierAttacking() {}
 void StateSoldierAttacking::Enter() { m_go->moveSpeed = m_go->baseSpeed; attackCooldown = 0.f; }
 void StateSoldierAttacking::Update(double dt) {
-	if (m_go->health < m_go->maxHealth * 0.3f) { m_go->sm->SetNextState("Retreating"); return; }
+	if (m_go->health < m_go->maxHealth * 0.4f) { m_go->sm->SetNextState("Retreating"); return; }
 	attackCooldown += (float)dt; if (!m_go->targetEnemy || !m_go->targetEnemy->active) { m_go->targetEnemy = nullptr; m_go->sm->SetNextState("Resting"); return; } m_go->target = m_go->targetEnemy->pos; if ((m_go->pos - m_go->targetEnemy->pos).LengthSquared() < m_go->attackRange * m_go->attackRange) { if (attackCooldown > 0.5f) { m_go->targetEnemy->health -= m_go->attackPower; attackCooldown = 0.f; if (m_go->targetEnemy->health <= 0.f) { PostOffice::GetInstance()->Send("Scene", new MessageUnitDied(m_go->targetEnemy, m_go->targetEnemy->teamID, m_go->targetEnemy->type)); m_go->targetEnemy->active = false; m_go->targetEnemy = nullptr; m_go->sm->SetNextState("Resting"); } } }
 }
 void StateSoldierAttacking::Exit() {}
-
 StateSoldierResting::StateSoldierResting(const std::string& stateID, GameObject* go) : State(stateID), m_go(go), restTimer(0.f) {}
 StateSoldierResting::~StateSoldierResting() {}
 void StateSoldierResting::Enter() { m_go->moveSpeed = m_go->baseSpeed; m_go->target = m_go->homeBase; restTimer = 0.f; }
-void StateSoldierResting::Update(double dt) {
-	restTimer += (float)dt;
-	if ((m_go->pos - m_go->homeBase).LengthSquared() > 1.f) m_go->target = m_go->homeBase;
-	if (m_go->targetEnemy && m_go->targetEnemy->active) { m_go->sm->SetNextState("Attacking"); return; }
-
-	// --- NEW: CONDITIONAL HEALING ---
-	// "if colony has at least one enemy npc they wont be able to heal"
-	// We check if the soldier currently perceives an enemy near the base
-	bool baseIsSafe = true;
-	if (m_go->targetEnemy && m_go->targetEnemy->active) {
-		float distToHomeSq = (m_go->targetEnemy->pos - m_go->homeBase).LengthSquared();
-		// If enemy is within ~5 grids of home, consider it unsafe
-		if (distToHomeSq < 100.f) baseIsSafe = false;
-	}
-
-	if (baseIsSafe && (m_go->pos - m_go->homeBase).LengthSquared() < 4.f) {
-		m_go->health = Math::Min(m_go->maxHealth, m_go->health + (float)dt * 1.f);
-	}
-
-	if (m_go->health > m_go->maxHealth * 0.9f && restTimer > 2.f) m_go->sm->SetNextState("Patrolling");
-}
+void StateSoldierResting::Update(double dt) { restTimer += (float)dt; if ((m_go->pos - m_go->homeBase).LengthSquared() > 1.f) m_go->target = m_go->homeBase; if (m_go->targetEnemy && m_go->targetEnemy->active) { m_go->sm->SetNextState("Attacking"); return; } if ((m_go->pos - m_go->homeBase).LengthSquared() < 4.f) { m_go->health = Math::Min(m_go->maxHealth, m_go->health + (float)dt * 1.f); } if (m_go->health > m_go->maxHealth * 0.9f && restTimer > 2.f) m_go->sm->SetNextState("Patrolling"); }
 void StateSoldierResting::Exit() {}
-
 StateSoldierRetreating::StateSoldierRetreating(const std::string& stateID, GameObject* go) : State(stateID), m_go(go) {}
 StateSoldierRetreating::~StateSoldierRetreating() {}
 void StateSoldierRetreating::Enter() { m_go->moveSpeed = m_go->baseSpeed * 1.5f; PostOffice::GetInstance()->Send("Scene", new MessageRequestHelp(m_go, m_go->pos, m_go->teamID)); }
