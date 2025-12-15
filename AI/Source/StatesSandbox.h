@@ -4,7 +4,7 @@
 #include "GameObject.h"
 #include "Vector3.h"
 #include "Maze.h"
-
+void ResetGlobalSandboxVars();
 // ================= WORKER STATES =================
 class StateWorkerIdle : public State
 {
@@ -133,6 +133,16 @@ public:
 	virtual void Update(double dt);
 	virtual void Exit();
 };
+class StateQueenFleeing : public State
+{
+	GameObject* m_go;
+public:
+	StateQueenFleeing(const std::string& stateID, GameObject* go);
+	virtual ~StateQueenFleeing();
+	virtual void Enter();
+	virtual void Update(double dt);
+	virtual void Exit();
+};
 
 // ================= NEW UNITS: HEALER =================
 class StateHealerIdle : public State {
@@ -180,8 +190,7 @@ public:
 
 class StateScoutReturnToColony : public State {
 	GameObject* m_go;
-	// --- UPDATED: Track Grid Coordinates instead of float position ---
-	MazePt lastGridPos;
+	Vector3 lastTrailPos;
 public:
 	StateScoutReturnToColony(const std::string& stateID, GameObject* go) : State(stateID), m_go(go) {}
 	virtual ~StateScoutReturnToColony() {}

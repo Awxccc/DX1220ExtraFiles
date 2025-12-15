@@ -36,7 +36,7 @@ void SceneSandbox::Init()
 	m_speed = 1.f;
 
 	Math::InitRNG();
-
+	
 	// Grid setup - 30x30
 	m_noGrid = 30;
 	m_gridSize = m_worldHeight / m_noGrid;
@@ -80,7 +80,7 @@ void SceneSandbox::Init()
 	SceneData::GetInstance()->SetNumGrid(m_noGrid);
 	SceneData::GetInstance()->SetGridSize(m_gridSize);
 	SceneData::GetInstance()->SetGridOffset(m_gridOffset);
-
+	ResetGlobalSandboxVars();
 	// Register scene with post office
 	PostOffice::GetInstance()->Register("Scene", this);
 

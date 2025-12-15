@@ -21,6 +21,11 @@ void SceneData::SetFishCount(const int fishCount)
 }
 
 SceneData::SceneData()
+	: m_objectCount(0)
+	, m_fishCount(0)
+	, m_noGrid(0)
+	, m_gridSize(0.f)
+	, m_gridOffset(0.f)
 {
 }
 
