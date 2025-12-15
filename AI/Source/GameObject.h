@@ -38,6 +38,7 @@ struct GameObject : public ObjectBase
 		GO_FOOD,
 		GO_NEST,
 		GO_ELITE_GUARD,
+		GO_PHEROMONE,
 
 		GO_TOTAL, //must be last
 	};
@@ -83,6 +84,7 @@ struct GameObject : public ObjectBase
 	std::vector<bool> visited;
 	std::vector<MazePt> stack; //for dfs
 	std::vector<MazePt> path;  //for storing path
+	std::vector<MazePt> pathHistory;
 	MazePt curr;
 
 	//week 12
@@ -121,6 +123,8 @@ struct GameObject : public ObjectBase
 	GameObject* targetFoodItem;
 	int resourceCount;
 	int harvesterCount;
+	bool isMarked;
+
 };
 
 #endif

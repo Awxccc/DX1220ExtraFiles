@@ -13,10 +13,9 @@
 SceneSandbox::SceneSandbox()
 	: m_goList{}, m_spatialGrid{}, m_speed{}, m_worldWidth{}, m_worldHeight{},
 	m_noGrid{}, m_gridSize{}, m_gridOffset{},
-	m_redWorkerCount{}, m_redSoldierCount{}, m_redHealerCount{}, m_redScoutCount{}, m_redTankCount{}, m_redResources{},
-	m_blueWorkerCount{}, m_blueSoldierCount{}, m_blueHealerCount{}, m_blueScoutCount{}, m_blueTankCount{}, m_blueResources{},
-	m_redQueen{}, m_blueQueen{}, m_foodLocations{}, m_simulationTime{},
-	m_simulationEnded{}, m_winner{}, m_updateTimer{}, m_updateCycle{}, m_wallGrid{}
+	m_redWorkerCount{}, m_redResources{}, m_blueWorkerCount{}, m_blueResources{},
+	m_redQueen{}, m_blueQueen{}, m_simulationTime{}, m_simulationEnded{}, m_winner{}, m_updateTimer{}, m_updateCycle{},
+	m_wallGrid{}, m_foodGrid{}
 {
 }
 
@@ -44,6 +43,7 @@ void SceneSandbox::Init()
 	m_gridOffset = m_gridSize / 2;
 
 	m_wallGrid.assign(m_noGrid * m_noGrid, false);
+	m_foodGrid.assign(m_noGrid * m_noGrid, false);
 
 	// 1. Walls around Speedy Ant Colony
 	for (int y = 0; y <= 7; ++y)
@@ -90,48 +90,20 @@ void SceneSandbox::Init()
 	m_simulationTime = 0.f; m_simulationEnded = false; m_winner = 2;
 	m_updateTimer = 0.f; m_updateCycle = 0;
 
-	// Spawn Speedy Ant Queen (bottom-left corner)
-	m_redQueen = FetchGO(GameObject::GO_QUEEN);
-	m_redQueen->teamID = 0;
-	m_redQueen->pos.Set(m_gridSize * 3.f + m_gridOffset, m_gridSize * 3.f + m_gridOffset, 0);
-	m_redQueen->homeBase = m_redQueen->pos;
-	m_redQueen->scale.Set(m_gridSize * 1.5f, m_gridSize * 1.5f, 1.f);
-	m_redQueen->maxHealth = 50.f; m_redQueen->health = 50.f;
-	m_redQueen->moveSpeed = 0.f; m_redQueen->detectionRange = m_gridSize * 8.f;
-
-	m_redQueen->sm = new StateMachine();
-	m_redQueen->sm->AddState(new StateQueenSpawning("Spawning", m_redQueen));
-	m_redQueen->sm->AddState(new StateQueenEmergency("Emergency", m_redQueen));
-	m_redQueen->sm->AddState(new StateQueenCooldown("Cooldown", m_redQueen));
-	m_redQueen->sm->SetNextState("Spawning");
-
-	// Spawn Strong Ant Queen (top-right corner)
-	m_blueQueen = FetchGO(GameObject::GO_STRONG_ANT_QUEEN);
-	m_blueQueen->teamID = 1;
-	m_blueQueen->pos.Set(m_gridSize * (m_noGrid - 4.f) + m_gridOffset, m_gridSize * (m_noGrid - 4.f) + m_gridOffset, 0);
-	m_blueQueen->homeBase = m_blueQueen->pos;
-	m_blueQueen->scale.Set(m_gridSize * 1.5f, m_gridSize * 1.5f, 1.f);
-	m_blueQueen->maxHealth = 50.f; m_blueQueen->health = 50.f;
-	m_blueQueen->moveSpeed = 0.f; m_blueQueen->detectionRange = m_gridSize * 8.f;
-
-	m_blueQueen->sm = new StateMachine();
-	m_blueQueen->sm->AddState(new StateQueenSpawning("Spawning", m_blueQueen));
-	m_blueQueen->sm->AddState(new StateQueenEmergency("Emergency", m_blueQueen));
-	m_blueQueen->sm->AddState(new StateQueenCooldown("Cooldown", m_blueQueen));
-	m_blueQueen->sm->SetNextState("Spawning");
+	//spawn queens
+	m_redQueen = FetchGO(GameObject::GO_QUEEN); m_redQueen->teamID = 0; m_redQueen->pos.Set(m_gridSize * 3.f + m_gridOffset, m_gridSize * 3.f + m_gridOffset, 0); m_redQueen->homeBase = m_redQueen->pos; m_redQueen->scale.Set(m_gridSize * 1.5f, m_gridSize * 1.5f, 1.f); m_redQueen->maxHealth = 50.f; m_redQueen->health = 50.f; m_redQueen->moveSpeed = 0.f; m_redQueen->detectionRange = m_gridSize * 8.f; m_redQueen->sm = new StateMachine(); m_redQueen->sm->AddState(new StateQueenSpawning("Spawning", m_redQueen)); m_redQueen->sm->AddState(new StateQueenEmergency("Emergency", m_redQueen)); m_redQueen->sm->AddState(new StateQueenCooldown("Cooldown", m_redQueen)); m_redQueen->sm->SetNextState("Spawning");
+	m_blueQueen = FetchGO(GameObject::GO_QUEEN); m_blueQueen->teamID = 1; m_blueQueen->pos.Set(m_gridSize * (m_noGrid - 4.f) + m_gridOffset, m_gridSize * (m_noGrid - 4.f) + m_gridOffset, 0); m_blueQueen->homeBase = m_blueQueen->pos; m_blueQueen->scale.Set(m_gridSize * 1.5f, m_gridSize * 1.5f, 1.f); m_blueQueen->maxHealth = 50.f; m_blueQueen->health = 50.f; m_blueQueen->moveSpeed = 0.f; m_blueQueen->detectionRange = m_gridSize * 8.f; m_blueQueen->sm = new StateMachine(); m_blueQueen->sm->AddState(new StateQueenSpawning("Spawning", m_blueQueen)); m_blueQueen->sm->AddState(new StateQueenEmergency("Emergency", m_blueQueen)); m_blueQueen->sm->AddState(new StateQueenCooldown("Cooldown", m_blueQueen)); m_blueQueen->sm->SetNextState("Spawning");
 
 	// Spawn initial workers for both teams
 	for (int i = 0; i < 3; ++i)
 	{
 		// Speedy Ant workers
 		SpawnUnit(MessageSpawnUnit::UNIT_SPEEDY_ANT_WORKER,
-			m_redQueen->pos + Vector3(Math::RandFloatMinMax(-2, 2) * m_gridSize,
-				Math::RandFloatMinMax(-2, 2) * m_gridSize, 0), 0);
+			m_redQueen->pos + Vector3(0, 0), 0);
 
 		// Strong workers
 		SpawnUnit(MessageSpawnUnit::UNIT_STRONG_ANT_WORKER,
-			m_blueQueen->pos + Vector3(Math::RandFloatMinMax(-2, 2) * m_gridSize,
-				Math::RandFloatMinMax(-2, 2) * m_gridSize, 0), 1);
+			m_blueQueen->pos + Vector3(0, 0), 1);
 	}
 
 	// Spawn initial soldiers
@@ -156,57 +128,57 @@ void SceneSandbox::Init()
 
 	// Spawn food resources in center and various locations
 	m_foodLocations.clear();
+	std::vector<GameObject*> allFood; // Keep track for trail generation
 	int foodCount = Math::RandIntMinMax(15, 25);
 	for (int i = 0; i < foodCount; ++i)
 	{
 		GameObject* food = FetchGO(GameObject::GO_FOOD);
 		int gridX, gridY;
 		bool validPos = false;
-
-		// Attempt to find valid position
 		while (!validPos)
 		{
-			if (i < foodCount / 2) {
-				int minC = static_cast<int>(m_noGrid * 0.3f);
-				int maxC = static_cast<int>(m_noGrid * 0.7f);
-				gridX = Math::RandIntMinMax(minC, maxC);
-				gridY = Math::RandIntMinMax(minC, maxC);
-			}
-			else {
-				gridX = Math::RandIntMinMax(2, m_noGrid - 3);
-				gridY = Math::RandIntMinMax(2, m_noGrid - 3);
-			}
-
-			// Check walls
-			if (!IsWithinBoundary(gridX) || !IsWithinBoundary(gridY) || m_wallGrid[Get1DIndex(gridX, gridY)])
-				continue;
-
-			// Check Speedy Ant Colony (Bottom-Left approx 0-7)
+			if (i < foodCount / 2) { int minC = static_cast<int>(m_noGrid * 0.3f); int maxC = static_cast<int>(m_noGrid * 0.7f); gridX = Math::RandIntMinMax(minC, maxC); gridY = Math::RandIntMinMax(minC, maxC); }
+			else { gridX = Math::RandIntMinMax(2, m_noGrid - 3); gridY = Math::RandIntMinMax(2, m_noGrid - 3); }
+			if (!IsWithinBoundary(gridX) || !IsWithinBoundary(gridY) || m_wallGrid[Get1DIndex(gridX, gridY)]) continue;
+			if (m_foodGrid[Get1DIndex(gridX, gridY)]) continue;
 			if (gridX <= 8 && gridY <= 8) continue;
-
-			// Check Strong Ant Colony (Top-Right approx 22-29)
 			if (gridX >= 21 && gridY >= 21) continue;
-
 			validPos = true;
 		}
-
 		float worldX = gridX * m_gridSize + m_gridOffset;
 		float worldY = gridY * m_gridSize + m_gridOffset;
-
 		food->pos.Set(worldX, worldY, 0);
 		food->scale.Set(m_gridSize * 0.8f, m_gridSize * 0.8f, 1.f);
 		food->moveSpeed = 0.f;
 		food->health = 1.f;
 		food->resourceCount = 25;
 		food->harvesterCount = 0;
+		food->isMarked = false;
+		m_foodGrid[Get1DIndex(gridX, gridY)] = true;
 		m_foodLocations.push_back(food->pos);
+		allFood.push_back(food);
 	}
 
-	std::cout << "=== Sandbox Simulation Started ===" << std::endl;
-	std::cout << "Grid Size: " << m_noGrid << "x" << m_noGrid << std::endl;
-	std::cout << "Food Resources: " << foodCount << std::endl;
-	std::cout << "Speedy Ant Colony: Bottom-Left | Strong Ant Colony: Top-Right" << std::endl;
-	std::cout << "Simulation will run for 5 minutes..." << std::endl;
+	std::vector<GameObject*> redFood = allFood;
+	std::sort(redFood.begin(), redFood.end(), [&](GameObject* a, GameObject* b) {
+		return (a->pos - m_redQueen->pos).LengthSquared() < (b->pos - m_redQueen->pos).LengthSquared();
+		});
+	// Mark and spawn trails for top 2
+	for (int i = 0; i < 2 && i < redFood.size(); ++i) {
+		redFood[i]->isMarked = true;
+		SpawnTrail(m_redQueen, redFood[i], 0);
+	}
+
+	std::vector<GameObject*> blueFood = allFood;
+	std::sort(blueFood.begin(), blueFood.end(), [&](GameObject* a, GameObject* b) {
+		return (a->pos - m_blueQueen->pos).LengthSquared() < (b->pos - m_blueQueen->pos).LengthSquared();
+		});
+	for (int i = 0; i < 2 && i < blueFood.size(); ++i) {
+		// Only spawn trail if not already marked by RED (avoid double trails for simplicity, or allow both)
+		// We will just mark it true again, it's fine.
+		blueFood[i]->isMarked = true;
+		SpawnTrail(m_blueQueen, blueFood[i], 1);
+	}
 }
 
 GameObject* SceneSandbox::FetchGO(GameObject::GAMEOBJECT_TYPE type)
@@ -222,121 +194,82 @@ GameObject* SceneSandbox::FetchGO(GameObject::GAMEOBJECT_TYPE type)
 	return FetchGO(type);
 }
 
-void SceneSandbox::SpawnUnit(MessageSpawnUnit::UNIT_TYPE unitType, Vector3 position, int teamID)
-{
+void SceneSandbox::SpawnUnit(MessageSpawnUnit::UNIT_TYPE unitType, Vector3 position, int teamID) {
 	GameObject* unit = nullptr;
+	// --- BALANCED STATS FOR BOTH COLONIES ---
+	float workerHP = 10.f; float workerSpeed = 5.f; float workerAtk = 0.5f;
+	float soldierHP = 20.f; float soldierSpeed = 3.f; float soldierAtk = 3.0f;
 
-	switch (unitType)
-	{
+	switch (unitType) {
+	case MessageSpawnUnit::UNIT_PHEROMONE: unit = FetchGO(GameObject::GO_PHEROMONE); unit->teamID = teamID; unit->moveSpeed = 0.f; break;
+
 	case MessageSpawnUnit::UNIT_SPEEDY_ANT_WORKER:
-		unit = FetchGO(GameObject::GO_WORKER);
-		unit->teamID = 0;
-		unit->homeBase = m_redQueen->pos;
-		unit->maxHealth = 5.f; unit->health = 5.f; unit->attackPower = 0.2f; unit->moveSpeed = 6.f; unit->baseSpeed = 6.f;
-		unit->detectionRange = m_gridSize * 7.f; unit->attackRange = m_gridSize * 0.8f;
-
-		unit->sm = new StateMachine();
-		unit->sm->AddState(new StateWorkerIdle("Idle", unit));
-		unit->sm->AddState(new StateWorkerSearching("Searching", unit));
-		unit->sm->AddState(new StateWorkerGathering("Gathering", unit));
-		unit->sm->AddState(new StateWorkerFleeing("Fleeing", unit));
-		unit->sm->SetNextState("Idle");
-		m_redWorkerCount++;
+	case MessageSpawnUnit::UNIT_STRONG_ANT_WORKER:
+		unit = FetchGO(GameObject::GO_WORKER); unit->teamID = teamID;
+		unit->homeBase = (teamID == 0) ? m_redQueen->pos : m_blueQueen->pos;
+		unit->maxHealth = workerHP; unit->health = workerHP; unit->attackPower = workerAtk; unit->moveSpeed = workerSpeed; unit->baseSpeed = workerSpeed;
+		unit->detectionRange = m_gridSize * 6.f; unit->attackRange = m_gridSize * 0.8f;
+		unit->sm = new StateMachine(); unit->sm->AddState(new StateWorkerIdle("Idle", unit)); unit->sm->AddState(new StateWorkerSearching("Searching", unit)); unit->sm->AddState(new StateWorkerGathering("Gathering", unit)); unit->sm->AddState(new StateWorkerFleeing("Fleeing", unit)); unit->sm->SetNextState("Idle");
 		break;
 
 	case MessageSpawnUnit::UNIT_SPEEDY_ANT_SOLDIER:
-		unit = FetchGO(GameObject::GO_SOLDIER);
-		unit->teamID = 0;
-		unit->homeBase = m_redQueen->pos;
-		unit->maxHealth = 10.f; unit->health = 10.f; unit->attackPower = 1.5f; unit->moveSpeed = 4.f; unit->baseSpeed = 4.f;
-		unit->detectionRange = m_gridSize * 9.f; unit->attackRange = m_gridSize * 1.2f;
-
-		unit->sm = new StateMachine();
-		unit->sm->AddState(new StateSoldierPatrolling("Patrolling", unit));
-		unit->sm->AddState(new StateSoldierAttacking("Attacking", unit));
-		unit->sm->AddState(new StateSoldierResting("Resting", unit)); // Merged Defending
-		unit->sm->AddState(new StateSoldierRetreating("Retreating", unit));
-		unit->sm->SetNextState("Patrolling");
-		m_redSoldierCount++;
-		break;
-
-	case MessageSpawnUnit::UNIT_STRONG_ANT_WORKER:
-		unit = FetchGO(GameObject::GO_WORKER);
-		unit->teamID = 1;
-		unit->homeBase = m_blueQueen->pos;
-		unit->maxHealth = 15.f; unit->health = 15.f; unit->attackPower = 1.0f; unit->moveSpeed = 3.0f; unit->baseSpeed = 3.f;
-		unit->detectionRange = m_gridSize * 5.f; unit->attackRange = m_gridSize * 0.7f;
-
-		unit->sm = new StateMachine();
-		unit->sm->AddState(new StateWorkerIdle("Idle", unit));
-		unit->sm->AddState(new StateWorkerSearching("Searching", unit));
-		unit->sm->AddState(new StateWorkerGathering("Gathering", unit));
-		unit->sm->AddState(new StateWorkerFleeing("Fleeing", unit));
-		unit->sm->SetNextState("Idle");
-		m_blueWorkerCount++;
-		break;
-
 	case MessageSpawnUnit::UNIT_STRONG_ANT_SOLDIER:
-		unit = FetchGO(GameObject::GO_SOLDIER);
-		unit->teamID = 1;
-		unit->homeBase = m_blueQueen->pos;
-		unit->maxHealth = 30.f; unit->health = 30.f; unit->attackPower = 5.0f; unit->moveSpeed = 2.0f; unit->baseSpeed = 2.f;
-		unit->detectionRange = m_gridSize * 6.f; unit->attackRange = m_gridSize * 1.3f;
-
-		unit->sm = new StateMachine();
-		unit->sm->AddState(new StateSoldierPatrolling("Patrolling", unit));
-		unit->sm->AddState(new StateSoldierAttacking("Attacking", unit));
-		unit->sm->AddState(new StateSoldierResting("Resting", unit));
-		unit->sm->AddState(new StateSoldierRetreating("Retreating", unit));
-		unit->sm->SetNextState("Patrolling");
-		m_blueSoldierCount++;
-		break;
-	case MessageSpawnUnit::UNIT_HEALER:
-		unit = FetchGO(GameObject::GO_HEALER);
-		unit->teamID = teamID;
+		unit = FetchGO(GameObject::GO_SOLDIER); unit->teamID = teamID;
 		unit->homeBase = (teamID == 0) ? m_redQueen->pos : m_blueQueen->pos;
-		unit->maxHealth = 8.f; unit->health = 8.f; unit->moveSpeed = 4.f; unit->baseSpeed = 4.f;
-		unit->sm = new StateMachine();
-		unit->sm->AddState(new StateHealerIdle("Idle", unit));
-		unit->sm->AddState(new StateHealerTraveling("Traveling", unit));
-		unit->sm->AddState(new StateHealerHealing("Healing", unit));
-		unit->sm->SetNextState("Idle");
+		unit->maxHealth = soldierHP; unit->health = soldierHP; unit->attackPower = soldierAtk; unit->moveSpeed = soldierSpeed; unit->baseSpeed = soldierSpeed;
+		unit->detectionRange = m_gridSize * 8.f; unit->attackRange = m_gridSize * 1.3f;
+		unit->sm = new StateMachine(); unit->sm->AddState(new StateSoldierPatrolling("Patrolling", unit)); unit->sm->AddState(new StateSoldierAttacking("Attacking", unit)); unit->sm->AddState(new StateSoldierResting("Resting", unit)); unit->sm->AddState(new StateSoldierRetreating("Retreating", unit)); unit->sm->SetNextState("Patrolling");
 		break;
 
-	case MessageSpawnUnit::UNIT_SCOUT:
-		unit = FetchGO(GameObject::GO_SCOUT);
-		unit->teamID = teamID;
-		unit->homeBase = (teamID == 0) ? m_redQueen->pos : m_blueQueen->pos;
-		unit->maxHealth = 5.f; unit->health = 5.f; unit->moveSpeed = 8.f; unit->baseSpeed = 8.f;
-		unit->detectionRange = m_gridSize * 15.f; // Huge vision
-		unit->sm = new StateMachine();
-		unit->sm->AddState(new StateScoutPatrolling("Patrolling", unit));
-		unit->sm->AddState(new StateScoutReporting("Reporting", unit));
-		unit->sm->AddState(new StateScoutHiding("Hiding", unit));
-		unit->sm->SetNextState("Patrolling");
-		break;
-
-	case MessageSpawnUnit::UNIT_TANK:
-		unit = FetchGO(GameObject::GO_TANK);
-		unit->teamID = teamID;
-		unit->homeBase = (teamID == 0) ? m_redQueen->pos : m_blueQueen->pos;
-		unit->maxHealth = 40.f; unit->health = 40.f; unit->moveSpeed = 1.5f; unit->baseSpeed = 1.5f;
-		unit->attackPower = 1.0f; unit->attackRange = m_gridSize * 0.5f;
-		unit->sm = new StateMachine();
-		unit->sm->AddState(new StateTankGuarding("Guarding", unit));
-		unit->sm->AddState(new StateTankBlocking("Blocking", unit));
-		unit->sm->AddState(new StateTankRecovering("Recovering", unit));
-		unit->sm->SetNextState("Guarding");
-		break;
+	case MessageSpawnUnit::UNIT_HEALER: unit = FetchGO(GameObject::GO_HEALER); unit->teamID = teamID; unit->homeBase = (teamID == 0) ? m_redQueen->pos : m_blueQueen->pos; unit->maxHealth = 8.f; unit->health = 8.f; unit->moveSpeed = 4.f; unit->baseSpeed = 4.f; unit->sm = new StateMachine(); unit->sm->AddState(new StateHealerIdle("Idle", unit)); unit->sm->AddState(new StateHealerTraveling("Traveling", unit)); unit->sm->AddState(new StateHealerHealing("Healing", unit)); unit->sm->SetNextState("Idle"); break;
+	case MessageSpawnUnit::UNIT_SCOUT: unit = FetchGO(GameObject::GO_SCOUT); unit->teamID = teamID; unit->homeBase = (teamID == 0) ? m_redQueen->pos : m_blueQueen->pos; unit->maxHealth = 5.f; unit->health = 5.f; unit->moveSpeed = 8.f; unit->baseSpeed = 8.f; unit->detectionRange = m_gridSize * 6.f; unit->sm = new StateMachine(); unit->sm->AddState(new StateScoutPatrolling("Patrolling", unit)); unit->sm->AddState(new StateScoutReturnToColony("ReturnToColony", unit)); unit->sm->AddState(new StateScoutHiding("Hiding", unit)); unit->sm->SetNextState("Patrolling"); break;
+	case MessageSpawnUnit::UNIT_TANK: unit = FetchGO(GameObject::GO_TANK); unit->teamID = teamID; unit->homeBase = (teamID == 0) ? m_redQueen->pos : m_blueQueen->pos; unit->maxHealth = 40.f; unit->health = 40.f; unit->moveSpeed = 1.5f; unit->baseSpeed = 1.5f; unit->attackPower = 1.0f; unit->attackRange = m_gridSize * 0.5f; unit->sm = new StateMachine(); unit->sm->AddState(new StateTankGuarding("Guarding", unit)); unit->sm->AddState(new StateTankBlocking("Blocking", unit)); unit->sm->AddState(new StateTankRecovering("Recovering", unit)); unit->sm->SetNextState("Guarding"); break;
 	}
-
 	if (unit) {
-		int gx = (int)(position.x / m_gridSize);
-		int gy = (int)(position.y / m_gridSize);
-		unit->pos.Set(gx * m_gridSize + m_gridOffset, gy * m_gridSize + m_gridOffset, 0);
-		unit->target = unit->pos;
-		unit->scale.Set(m_gridSize, m_gridSize, 1.f);
-		unit->targetFoodItem = nullptr;
+		// --- FIX: SNAP PHEROMONE TO GRID ---
+		if (unitType == MessageSpawnUnit::UNIT_PHEROMONE) {
+			int gx = (int)(position.x / m_gridSize); int gy = (int)(position.y / m_gridSize);
+			unit->pos.Set(gx * m_gridSize + m_gridOffset, gy * m_gridSize + m_gridOffset, 0);
+			unit->scale.Set(m_gridSize * 0.3f, m_gridSize * 0.3f, 1.f);
+		}
+		else {
+			int gx = (int)(position.x / m_gridSize); int gy = (int)(position.y / m_gridSize);
+			unit->pos.Set(gx * m_gridSize + m_gridOffset, gy * m_gridSize + m_gridOffset, 0);
+			unit->target = unit->pos;
+			unit->scale.Set(m_gridSize, m_gridSize, 1.f);
+			unit->targetFoodItem = nullptr;
+		}
+	}
+}
+
+void SceneSandbox::SpawnTrail(GameObject* startObj, GameObject* endFood, int teamID)
+{
+	int gxStart = (int)(startObj->pos.x / m_gridSize); int gyStart = (int)(startObj->pos.y / m_gridSize);
+	int gxEnd = (int)(endFood->pos.x / m_gridSize); int gyEnd = (int)(endFood->pos.y / m_gridSize);
+	MazePt startPt(gxStart, gyStart); MazePt endPt(gxEnd, gyEnd);
+	MazePt targetPt = GetNearestVacantNeighbor(endPt, startPt);
+	std::vector<MazePt> path = FindPath(startPt, targetPt);
+
+	for (MazePt pt : path) {
+		// --- FIX: CHECK IF TRAIL ALREADY EXISTS ---
+		bool exists = false;
+		for (auto go : m_goList) {
+			if (go->active && go->type == GameObject::GO_PHEROMONE) {
+				int pgx = (int)(go->pos.x / m_gridSize);
+				int pgy = (int)(go->pos.y / m_gridSize);
+				if (pgx == pt.x && pgy == pt.y) {
+					exists = true;
+					break;
+				}
+			}
+		}
+		if (exists) continue;
+		// ------------------------------------------
+
+		Vector3 pos(pt.x * m_gridSize + m_gridOffset, pt.y * m_gridSize + m_gridOffset, 0);
+		GameObject* pheromone = FetchGO(GameObject::GO_PHEROMONE);
+		pheromone->active = true; pheromone->pos = pos; pheromone->teamID = teamID; pheromone->targetFoodItem = endFood;
+		pheromone->scale.Set(m_gridSize * 0.3f, m_gridSize * 0.3f, 1.f); pheromone->moveSpeed = 0.f;
 	}
 }
 
@@ -344,8 +277,7 @@ std::vector<MazePt> SceneSandbox::FindPath(MazePt start, MazePt end)
 {
 	std::vector<MazePt> path;
 	if (start.x == end.x && start.y == end.y) return path;
-	if (!IsWithinBoundary(end.x) || !IsWithinBoundary(end.y)) return path;
-	if (m_wallGrid[Get1DIndex(end.x, end.y)]) return path;
+	if (IsGridOccupied(end.x, end.y)) return path; // Cannot path TO a solid object (must path to neighbor)
 
 	std::vector<bool> visited(m_noGrid * m_noGrid, false);
 	std::vector<int> parent(m_noGrid * m_noGrid, -1);
@@ -355,68 +287,51 @@ std::vector<MazePt> SceneSandbox::FindPath(MazePt start, MazePt end)
 	visited[Get1DIndex(start.x, start.y)] = true;
 
 	bool found = false;
-	int dx[] = { 0, 0, -1, 1 };
-	int dy[] = { 1, -1, 0, 0 };
+	int dx[] = { 0, 0, -1, 1 }; int dy[] = { 1, -1, 0, 0 };
 
 	while (!q.empty())
 	{
-		MazePt curr = q.front();
-		q.pop();
-
+		MazePt curr = q.front(); q.pop();
 		if (curr.x == end.x && curr.y == end.y) { found = true; break; }
-
 		for (int i = 0; i < 4; ++i)
 		{
-			int nx = curr.x + dx[i];
-			int ny = curr.y + dy[i];
-			if (IsWithinBoundary(nx) && IsWithinBoundary(ny))
+			int nx = curr.x + dx[i]; int ny = curr.y + dy[i];
+			if (!IsGridOccupied(nx, ny)) // Use the updated check
 			{
 				int nIdx = Get1DIndex(nx, ny);
-				if (!visited[nIdx] && !m_wallGrid[nIdx])
-				{
-					visited[nIdx] = true;
-					parent[nIdx] = Get1DIndex(curr.x, curr.y);
-					q.push(MazePt(nx, ny));
-				}
+				if (!visited[nIdx]) { visited[nIdx] = true; parent[nIdx] = Get1DIndex(curr.x, curr.y); q.push(MazePt(nx, ny)); }
 			}
 		}
 	}
-
-	if (found) {
-		int currIdx = Get1DIndex(end.x, end.y);
-		int startIdx = Get1DIndex(start.x, start.y);
-		while (currIdx != startIdx) {
-			path.push_back(MazePt(currIdx % m_noGrid, currIdx / m_noGrid));
-			currIdx = parent[currIdx];
-		}
-		std::reverse(path.begin(), path.end());
-	}
+	// ... (reconstruct path) ...
+	if (found) { int currIdx = Get1DIndex(end.x, end.y); int startIdx = Get1DIndex(start.x, start.y); while (currIdx != startIdx) { path.push_back(MazePt(currIdx % m_noGrid, currIdx / m_noGrid)); currIdx = parent[currIdx]; } std::reverse(path.begin(), path.end()); }
 	return path;
 }
 
 // Removed collision logic
-bool SceneSandbox::IsGridOccupied(int gridX, int gridY, GameObject* self)
+bool SceneSandbox::IsGridOccupied(int gridX, int gridY)
 {
-	// Only return true if out of bounds or wall. Units do not block each other.
 	if (!IsWithinBoundary(gridX) || !IsWithinBoundary(gridY)) return true;
 	if (m_wallGrid[Get1DIndex(gridX, gridY)]) return true;
+	if (m_foodGrid[Get1DIndex(gridX, gridY)]) return true;
 	return false;
 }
 
 MazePt SceneSandbox::GetNearestVacantNeighbor(MazePt target, MazePt start)
 {
-	int dx[] = { 0, 0, -1, 1 };
-	int dy[] = { 1, -1, 0, 0 };
-	MazePt bestPt = target;
+	int dx[] = { 0, 0, -1, 1 }; int dy[] = { 1, -1, 0, 0 };
+	MazePt bestPt = start; // Fallback
 	float minDist = FLT_MAX;
+	bool foundAny = false;
+
 	for (int i = 0; i < 4; ++i) {
-		int nx = target.x + dx[i];
-		int ny = target.y + dy[i];
-		if (IsWithinBoundary(nx) && IsWithinBoundary(ny) && !m_wallGrid[Get1DIndex(nx, ny)]) {
+		int nx = target.x + dx[i]; int ny = target.y + dy[i];
+		if (!IsGridOccupied(nx, ny)) {
 			float dist = (float)((nx - start.x) * (nx - start.x) + (ny - start.y) * (ny - start.y));
-			if (dist < minDist) { minDist = dist; bestPt.Set(nx, ny); }
+			if (dist < minDist) { minDist = dist; bestPt.Set(nx, ny); foundAny = true; }
 		}
 	}
+	if (!foundAny) return start; // No access
 	return bestPt;
 }
 
@@ -437,145 +352,173 @@ void SceneSandbox::Update(double dt)
 	{
 		m_speed += 0.1f;
 	}
+	if (Application::IsKeyPressed(VK_END))
+	{
+		m_simulationEnded = true;
+	}
 
-	// Simulation time
-	m_simulationTime += static_cast<float>(dt) * m_speed;
+	
 
 	// Check win conditions
 	if (!m_simulationEnded)
 	{
-		// 5 minute timer
-		if (m_simulationTime >= 300.f)
-		{
-			m_simulationEnded = true;
-			// Determine winner based on resources and population
-			int speedyAntTotal = m_redWorkerCount + m_redSoldierCount + m_redHealerCount + m_redScoutCount + m_redTankCount + m_redResources;
-			int strongAntTotal = m_blueWorkerCount + m_blueSoldierCount + m_blueHealerCount + m_blueScoutCount + m_blueTankCount + m_blueResources;
-
-			if (speedyAntTotal > strongAntTotal)
-				m_winner = 0;
-			else if (strongAntTotal > speedyAntTotal)
-				m_winner = 1;
-			else
-				m_winner = 2;
-		}
+		// Simulation time
+		m_simulationTime += static_cast<float>(dt) * m_speed;
 
 		if (!m_redQueen->active) { m_simulationEnded = true; m_winner = 1; }
 		if (!m_blueQueen->active) { m_simulationEnded = true; m_winner = 0; }
-	}
 
-	// Update cycle for optimization (stagger updates)
-	m_updateTimer += static_cast<float>(dt);
-	if (m_updateTimer > 0.033f) // ~30 updates per second
-	{
-		m_updateTimer = 0.f;
-		m_updateCycle = (m_updateCycle + 1) % 3;
-		UpdateSpatialGrid();
-	}
-
-	// State machine updates
-	for (size_t i = 0; i < m_goList.size(); ++i) {
-		GameObject* go = m_goList[i];
-		if (go->active && go->sm) go->sm->Update(dt * m_speed);
-	}
-
-	// Detection and interaction (optimized with spatial grid)
-	int cycleCheck = 0;
-	for (size_t i = 0; i < m_goList.size(); ++i) {
-		GameObject* go = m_goList[i];
-		if (go->active && (cycleCheck % 3) == m_updateCycle) {
-			DetectNearbyEntities(go);
-			if (go->type == GameObject::GO_WORKER || go->type == GameObject::GO_STRONG_ANT_WORKER)
-				FindNearestResource(go);
-			if (go->type == GameObject::GO_HEALER)
-				FindNearestInjuredAlly(go);
-			// ----------------
-		}
-		cycleCheck++;
-	}
-	// Movement
-	for (size_t i = 0; i < m_goList.size(); ++i)
-	{
-		GameObject* go = m_goList[i];
-		if (!go->active || go->moveSpeed <= 0.f) continue;
-
-		int gridX = static_cast<int>(go->pos.x / m_gridSize);
-		int gridY = static_cast<int>(go->pos.y / m_gridSize);
-		int targetGridX = static_cast<int>(go->target.x / m_gridSize);
-		int targetGridY = static_cast<int>(go->target.y / m_gridSize);
-
-		// Resource Targeting
-		if (!go->targetResource.IsZero() && (go->target - go->targetResource).LengthSquared() < 1.0f) {
-			MazePt startPt(gridX, gridY); MazePt resPt(targetGridX, targetGridY); MazePt adjPt = GetNearestVacantNeighbor(resPt, startPt);
-			targetGridX = adjPt.x; targetGridY = adjPt.y;
-		}
-
-		gridX = Math::Clamp(gridX, 0, m_noGrid - 1); gridY = Math::Clamp(gridY, 0, m_noGrid - 1);
-		targetGridX = Math::Clamp(targetGridX, 0, m_noGrid - 1); targetGridY = Math::Clamp(targetGridY, 0, m_noGrid - 1);
-
-		bool needPath = false;
-		if (go->path.empty()) { if (gridX != targetGridX || gridY != targetGridY) needPath = true; }
-		else { MazePt last = go->path.back(); if (last.x != targetGridX || last.y != targetGridY) needPath = true; }
-
-		if (needPath) {
-			go->path = FindPath(MazePt(gridX, gridY), MazePt(targetGridX, targetGridY));
-			Vector3 center = Vector3(gridX * m_gridSize + m_gridOffset, gridY * m_gridSize + m_gridOffset, go->pos.z);
-			if ((go->pos - center).LengthSquared() > 0.05f) { go->path.insert(go->path.begin(), MazePt(gridX, gridY)); }
-		}
-
-		float step = go->moveSpeed * static_cast<float>(dt) * m_speed;
-
-		Vector3 moveVec(0, 0, 0);
-
-		if (!go->path.empty())
+		// Update cycle for optimization (stagger updates)
+		m_updateTimer += static_cast<float>(dt);
+		if (m_updateTimer > 0.033f) // ~30 updates per second
 		{
-			MazePt nextPt = go->path.front();
-			Vector3 nextPos(nextPt.x * m_gridSize + m_gridOffset, nextPt.y * m_gridSize + m_gridOffset, go->pos.z);
-			Vector3 dir = nextPos - go->pos;
-			float dist = dir.Length();
-
-			moveVec = dir; // Capture direction
-
-			if (dist <= step) { go->pos = nextPos; go->path.erase(go->path.begin()); }
-			else { go->pos += dir.Normalized() * step; }
+			m_updateTimer = 0.f;
+			m_updateCycle = (m_updateCycle + 1) % 3;
+			UpdateSpatialGrid();
 		}
-		else
-		{
-			Vector3 center = Vector3(gridX * m_gridSize + m_gridOffset, gridY * m_gridSize + m_gridOffset, go->pos.z);
-			if ((go->pos - center).LengthSquared() > 0.001f) {
-				Vector3 dir = center - go->pos;
-				moveVec = dir; // Capture direction
-				float dist = dir.Length();
-				if (dist <= step) go->pos = center; else go->pos += dir.Normalized() * step;
+
+		// --- NEW: SPAWN FOOD OVER TIME ---
+		m_foodSpawnTimer += (float)dt * m_speed;
+		if (m_foodSpawnTimer > 20.0f) {
+			m_foodSpawnTimer = 0.f;
+			// Try 10 times to find valid spot
+			for (int i = 0; i < 10; ++i) {
+				int gridX = Math::RandIntMinMax(2, m_noGrid - 3);
+				int gridY = Math::RandIntMinMax(2, m_noGrid - 3);
+				if (IsGridOccupied(gridX, gridY)) continue;
+				// Check Base Exclusion
+				if (gridX <= 8 && gridY <= 8) continue;
+				if (gridX >= 21 && gridY >= 21) continue;
+				// Check Trails
+				bool onTrail = false;
+				for (auto go : m_goList) {
+					if (go->active && go->type == GameObject::GO_PHEROMONE) {
+						int px = (int)(go->pos.x / m_gridSize); int py = (int)(go->pos.y / m_gridSize);
+						if (px == gridX && py == gridY) { onTrail = true; break; }
+					}
+				}
+				if (onTrail) continue;
+
+				// Spawn
+				GameObject* food = FetchGO(GameObject::GO_FOOD);
+				food->pos.Set(gridX * m_gridSize + m_gridOffset, gridY * m_gridSize + m_gridOffset, 0);
+				food->scale.Set(m_gridSize * 0.8f, m_gridSize * 0.8f, 1.f);
+				food->moveSpeed = 0.f; food->health = 1.f; food->resourceCount = 25; food->harvesterCount = 0; food->isMarked = false;
+				m_foodGrid[Get1DIndex(gridX, gridY)] = true;
+				break; // Success
 			}
 		}
 
-		// NEW: Update Facing Direction if moving
-		if (moveVec.LengthSquared() > 0.001f) {
-			go->viewDir = moveVec.Normalized();
+		// State machine updates
+		for (size_t i = 0; i < m_goList.size(); ++i) {
+			GameObject* go = m_goList[i];
+			if (go->active && go->sm) go->sm->Update(dt * m_speed);
+		}
+
+		for (int i = 0; i < m_foodGrid.size(); ++i) m_foodGrid[i] = false;
+		for (auto go : m_goList) { if (go->active && go->type == GameObject::GO_FOOD) { int gx = (int)(go->pos.x / m_gridSize); int gy = (int)(go->pos.y / m_gridSize); m_foodGrid[Get1DIndex(gx, gy)] = true; } }
+
+		for (size_t i = 0; i < m_goList.size(); ++i) { if (m_goList[i]->active && m_goList[i]->sm) m_goList[i]->sm->Update(dt * m_speed); }
+
+		int cycleCheck = 0;
+		for (size_t i = 0; i < m_goList.size(); ++i) {
+			GameObject* go = m_goList[i];
+			if (go->active && (cycleCheck % 3) == m_updateCycle) {
+				DetectNearbyEntities(go);
+
+				// --- FIX: RESTRICTED UPDATE LOGIC ---
+				if (go->type == GameObject::GO_WORKER && !go->isCarryingResource) // Workers only search if NOT carrying
+					FindNearestResource(go);
+
+				if (go->type == GameObject::GO_HEALER)
+					FindNearestInjuredAlly(go);
+
+				if (go->type == GameObject::GO_SCOUT && go->targetFoodItem == nullptr) // Scout only searches if IDLE/PATROL
+					FindNearestResource(go);
+				// ------------------------------------
+			}
+			cycleCheck++;
+		}
+		//Movement
+		for (size_t i = 0; i < m_goList.size(); ++i) {
+			GameObject* go = m_goList[i];
+			if (!go->active) continue;
+			if (go->type == GameObject::GO_PHEROMONE) { if (go->targetFoodItem == nullptr || !go->targetFoodItem->active || go->targetFoodItem->resourceCount <= 0) go->active = false; continue; }
+			if (go->moveSpeed <= 0.f) continue;
+
+			int gridX = static_cast<int>(go->pos.x / m_gridSize); int gridY = static_cast<int>(go->pos.y / m_gridSize);
+			MazePt targetPt(static_cast<int>(go->target.x / m_gridSize), static_cast<int>(go->target.y / m_gridSize));
+
+			// Auto-Adjust Target to Neighbor if Food
+			if (go->targetFoodItem != nullptr && go->targetFoodItem->active) {
+				// If it's a worker collecting OR a scout marking
+				bool shouldSnap = false;
+				if (go->type == GameObject::GO_WORKER && !go->isCarryingResource) shouldSnap = true;
+				if (go->type == GameObject::GO_SCOUT) {
+					// Only snap if we are "close" to it (meaning FSM wants to go there)
+					if ((go->target - go->targetFoodItem->pos).LengthSquared() < (m_gridSize * 5) * (m_gridSize * 5)) shouldSnap = true;
+				}
+
+				if (shouldSnap) {
+					targetPt = GetNearestVacantNeighbor(MazePt((int)(go->targetFoodItem->pos.x / m_gridSize), (int)(go->targetFoodItem->pos.y / m_gridSize)), MazePt(gridX, gridY));
+				}
+			}
+			bool needPath = false;
+			if (go->path.empty()) { if (gridX != targetPt.x || gridY != targetPt.y) needPath = true; }
+			else { MazePt last = go->path.back(); if (last.x != targetPt.x || last.y != targetPt.y) needPath = true; }
+
+			if (needPath) {
+				go->path = FindPath(MazePt(gridX, gridY), targetPt);
+				if (go->path.empty()) { go->target = go->pos; }
+				else { Vector3 center = Vector3(gridX * m_gridSize + m_gridOffset, gridY * m_gridSize + m_gridOffset, go->pos.z); if ((go->pos - center).LengthSquared() > 0.05f) { go->path.insert(go->path.begin(), MazePt(gridX, gridY)); } }
+			}
+
+			float step = go->moveSpeed * static_cast<float>(dt) * m_speed;
+			Vector3 moveVec(0, 0, 0);
+			if (!go->path.empty()) {
+				MazePt nextPt = go->path.front();
+				Vector3 nextPos(nextPt.x * m_gridSize + m_gridOffset, nextPt.y * m_gridSize + m_gridOffset, go->pos.z);
+				Vector3 dir = nextPos - go->pos; float dist = dir.Length(); moveVec = dir;
+				if (dist <= step) {
+					go->pos = nextPos;
+					// --- FIX: RECORD PATH FOR WORKERS ---
+					if (go->type == GameObject::GO_WORKER && !go->isCarryingResource) {
+						// Only push if different from last
+						if (go->pathHistory.empty() || go->pathHistory.back().x != nextPt.x || go->pathHistory.back().y != nextPt.y) {
+							go->pathHistory.push_back(nextPt);
+						}
+					}
+					go->path.erase(go->path.begin());
+				}
+				else { go->pos += dir.Normalized() * step; }
+			}
+			else { Vector3 center = Vector3(gridX * m_gridSize + m_gridOffset, gridY * m_gridSize + m_gridOffset, go->pos.z); if ((go->pos - center).LengthSquared() > 0.001f) { Vector3 dir = center - go->pos; moveVec = dir; float dist = dir.Length(); if (dist <= step) go->pos = center; else go->pos += dir.Normalized() * step; } }
+			if (moveVec.LengthSquared() > 0.001f) go->viewDir = moveVec.Normalized();
+		}
+
+		// Update counts
+		m_redWorkerCount = 0; m_redSoldierCount = 0; m_redHealerCount = 0; m_redScoutCount = 0; m_redTankCount = 0;
+		m_blueWorkerCount = 0; m_blueSoldierCount = 0; m_blueHealerCount = 0; m_blueScoutCount = 0; m_blueTankCount = 0;
+		for (auto go : m_goList) {
+			if (!go->active) continue;
+			if (go->teamID == 0) {
+				if (go->type == GameObject::GO_WORKER) m_redWorkerCount++;
+				else if (go->type == GameObject::GO_SOLDIER) m_redSoldierCount++;
+				else if (go->type == GameObject::GO_HEALER) m_redHealerCount++;
+				else if (go->type == GameObject::GO_SCOUT) m_redScoutCount++;
+				else if (go->type == GameObject::GO_TANK) m_redTankCount++;
+			}
+			else if (go->teamID == 1) {
+				if (go->type == GameObject::GO_WORKER) m_blueWorkerCount++;
+				else if (go->type == GameObject::GO_SOLDIER) m_blueSoldierCount++;
+				else if (go->type == GameObject::GO_HEALER) m_blueHealerCount++;
+				else if (go->type == GameObject::GO_SCOUT) m_blueScoutCount++;
+				else if (go->type == GameObject::GO_TANK) m_blueTankCount++;
+			}
 		}
 	}
 
-	// Update counts
-	m_redWorkerCount = 0; m_redSoldierCount = 0; m_redHealerCount = 0; m_redScoutCount = 0; m_redTankCount = 0;
-	m_blueWorkerCount = 0; m_blueSoldierCount = 0; m_blueHealerCount = 0; m_blueScoutCount = 0; m_blueTankCount = 0;
-	for (auto go : m_goList) {
-		if (!go->active) continue;
-		if (go->teamID == 0) {
-			if (go->type == GameObject::GO_WORKER) m_redWorkerCount++;
-			else if (go->type == GameObject::GO_SOLDIER) m_redSoldierCount++;
-			else if (go->type == GameObject::GO_HEALER) m_redHealerCount++;
-			else if (go->type == GameObject::GO_SCOUT) m_redScoutCount++;
-			else if (go->type == GameObject::GO_TANK) m_redTankCount++;
-		}
-		else if (go->teamID == 1) {
-			if (go->type == GameObject::GO_WORKER) m_blueWorkerCount++;
-			else if (go->type == GameObject::GO_SOLDIER) m_blueSoldierCount++;
-			else if (go->type == GameObject::GO_HEALER) m_blueHealerCount++;
-			else if (go->type == GameObject::GO_SCOUT) m_blueScoutCount++;
-			else if (go->type == GameObject::GO_TANK) m_blueTankCount++;
-		}
-	}
+	
 }
 
 void SceneSandbox::DetectNearbyEntities(GameObject* go)
@@ -648,22 +591,37 @@ void SceneSandbox::FindNearestResource(GameObject* go)
 	go->targetFoodItem = nullptr;
 	float nearestDistSq = FLT_MAX;
 
-	for (std::vector<GameObject*>::iterator it = m_goList.begin(); it != m_goList.end(); ++it)
-	{
-		GameObject* resource = (GameObject*)*it;
+	// 1. Look for FOOD (Global search for simplicity, or restricted if needed)
+	for (auto it = m_goList.begin(); it != m_goList.end(); ++it) {
+		GameObject* res = (GameObject*)*it;
+		if (!res->active || res->type != GameObject::GO_FOOD) continue;
+		if (res->harvesterCount >= 5 || res->resourceCount <= 0) continue;
+		if (go->type == GameObject::GO_SCOUT && res->isMarked) continue; // Scouts ignore marked
 
-		// --- UPDATED CONDITION ---
-		if (!resource->active || resource->type != GameObject::GO_FOOD) continue;
-		// Check for worker limit (Max 5) and if food is empty
-		if (resource->harvesterCount >= 5 || resource->resourceCount <= 0) continue;
-		// -------------------------
+		float distSq = (go->pos - res->pos).LengthSquared();
+		if (distSq < nearestDistSq) { nearestDistSq = distSq; go->targetResource = res->pos; go->targetFoodItem = res; }
+	}
 
-		float distSq = (go->pos - resource->pos).LengthSquared();
-		if (distSq < nearestDistSq)
-		{
-			nearestDistSq = distSq;
-			go->targetResource = resource->pos;
-			go->targetFoodItem = resource; // Store the pointer!
+	// 2. If Worker has NO food, look for NEARBY PHEROMONES
+	if (go->type == GameObject::GO_WORKER && go->targetFoodItem == nullptr) {
+		nearestDistSq = go->detectionRange * go->detectionRange; // --- FIX: Limit to Detection Range ---
+
+		for (auto it = m_goList.begin(); it != m_goList.end(); ++it) {
+			GameObject* trail = (GameObject*)*it;
+			if (!trail->active || trail->type != GameObject::GO_PHEROMONE) continue;
+			if (trail->teamID != go->teamID) continue;
+
+			// Check if trail is valid
+			if (trail->targetFoodItem == nullptr || !trail->targetFoodItem->active || trail->targetFoodItem->resourceCount <= 0) continue;
+
+			float distSq = (go->pos - trail->pos).LengthSquared();
+			// If nearby trail found
+			if (distSq < nearestDistSq) {
+				nearestDistSq = distSq;
+				// Set target to FOOD (Worker knows where it is now)
+				go->targetFoodItem = trail->targetFoodItem;
+				go->targetResource = trail->targetFoodItem->pos;
+			}
 		}
 	}
 }
@@ -747,35 +705,59 @@ int SceneSandbox::Get1DIndex(int x, int y) const
 	return y * m_noGrid + x;
 }
 
-bool SceneSandbox::Handle(Message* message)
-{
+bool SceneSandbox::Handle(Message* message) {
 	MessageSpawnUnit* msgSpawn = dynamic_cast<MessageSpawnUnit*>(message);
 	if (msgSpawn) {
-		int cost = 2; // Default
-		// Higher cost for Soldiers/Tanks
-		if (msgSpawn->type == MessageSpawnUnit::UNIT_SPEEDY_ANT_SOLDIER || msgSpawn->type == MessageSpawnUnit::UNIT_STRONG_ANT_SOLDIER || msgSpawn->type == MessageSpawnUnit::UNIT_TANK) cost = 5;
+		if (msgSpawn->type == MessageSpawnUnit::UNIT_PHEROMONE) {
+			bool exists = false;
+			int gx = (int)(msgSpawn->position.x / m_gridSize); int gy = (int)(msgSpawn->position.y / m_gridSize);
+			for (auto go : m_goList) { if (go->active && go->type == GameObject::GO_PHEROMONE) { int pgx = (int)(go->pos.x / m_gridSize); int pgy = (int)(go->pos.y / m_gridSize); if (gx == pgx && gy == pgy) { exists = true; break; } } }
+			if (!exists) { SpawnUnit(msgSpawn->type, msgSpawn->position, msgSpawn->spawner->teamID); for (int i = m_goList.size() - 1; i >= 0; --i) { GameObject* go = m_goList[i]; if (go->active && go->type == GameObject::GO_PHEROMONE && (go->pos - msgSpawn->position).LengthSquared() < 1.0f) { go->targetFoodItem = msgSpawn->spawner->targetFoodItem; break; } } }
+			return true;
+		}
 
-		if (msgSpawn->spawner->teamID == 0) { // Red
-			if (m_redResources >= cost) { m_redResources -= cost; SpawnUnit(msgSpawn->type, msgSpawn->position, 0); }
+		// --- NEW: COST & LIMITS ---
+		int cost = 0;
+		int currentCount = 0;
+		int limit = 100; // Default no limit
+
+		switch (msgSpawn->type) {
+		case MessageSpawnUnit::UNIT_SPEEDY_ANT_WORKER:
+		case MessageSpawnUnit::UNIT_STRONG_ANT_WORKER:
+			cost = 3;
+			limit = 10;
+			currentCount = (msgSpawn->spawner->teamID == 0) ? m_redWorkerCount : m_blueWorkerCount;
+			break;
+		case MessageSpawnUnit::UNIT_SCOUT:
+			cost = 4;
+			limit = 2;
+			currentCount = (msgSpawn->spawner->teamID == 0) ? m_redScoutCount : m_blueScoutCount;
+			break;
+		case MessageSpawnUnit::UNIT_SPEEDY_ANT_SOLDIER:
+		case MessageSpawnUnit::UNIT_STRONG_ANT_SOLDIER:
+			cost = 5;
+			break;
+		case MessageSpawnUnit::UNIT_HEALER: cost = 8; break;
+		case MessageSpawnUnit::UNIT_TANK: cost = 10; break;
 		}
-		else { // Blue
-			if (m_blueResources >= cost) { m_blueResources -= cost; SpawnUnit(msgSpawn->type, msgSpawn->position, 1); }
-		}
+
+		if (currentCount >= limit) return true; // Reached limit
+
+		if (msgSpawn->spawner->teamID == 0) { if (m_redResources >= cost) { m_redResources -= cost; SpawnUnit(msgSpawn->type, msgSpawn->position, 0); } }
+		else { if (m_blueResources >= cost) { m_blueResources -= cost; SpawnUnit(msgSpawn->type, msgSpawn->position, 1); } }
 		return true;
+		// --------------------------
 	}
-	MessageResourceDelivered* msgRes = dynamic_cast<MessageResourceDelivered*>(message);
-	if (msgRes) { if (msgRes->teamID == 0) m_redResources += msgRes->resourceAmount; else m_blueResources += msgRes->resourceAmount; return true; }
+	MessageResourceDelivered* msgRes = dynamic_cast<MessageResourceDelivered*>(message); if (msgRes) { if (msgRes->teamID == 0) m_redResources += msgRes->resourceAmount; else m_blueResources += msgRes->resourceAmount; return true; }
 
-	MessageUnitDied* msgDied = dynamic_cast<MessageUnitDied*>(message); if (msgDied) { return true; }
-	MessageResourceFound* msgFound = dynamic_cast<MessageResourceFound*>(message); if (msgFound) { return true; }
-
-	// FIX: Loop safely here too
+	// --- FIX: REDUCED PANIC RADIUS ---
 	MessageEnemySpotted* msgEnemy = dynamic_cast<MessageEnemySpotted*>(message);
 	if (msgEnemy) {
 		for (size_t i = 0; i < m_goList.size(); ++i) {
 			GameObject* go = m_goList[i];
 			if (!go->active || go->teamID != msgEnemy->teamID) continue;
-			if ((go->type == GameObject::GO_SOLDIER || go->type == GameObject::GO_STRONG_ANT_SOLDIER) && (go->pos - msgEnemy->enemy->pos).LengthSquared() < go->detectionRange * go->detectionRange * 2.f) { go->targetEnemy = msgEnemy->enemy; }
+			// Radius 4 grids (4*4*GridSize^2 = 16*GridSize^2)
+			if ((go->type == GameObject::GO_SOLDIER || go->type == GameObject::GO_STRONG_ANT_SOLDIER) && (go->pos - msgEnemy->enemy->pos).LengthSquared() < m_gridSize * m_gridSize * 16.f) { go->targetEnemy = msgEnemy->enemy; }
 		}
 		return true;
 	}
@@ -784,20 +766,14 @@ bool SceneSandbox::Handle(Message* message)
 		for (size_t i = 0; i < m_goList.size(); ++i) {
 			GameObject* go = m_goList[i];
 			if (!go->active || go->teamID != msgHelp->teamID) continue;
-			if ((go->type == GameObject::GO_SOLDIER || go->type == GameObject::GO_STRONG_ANT_SOLDIER) && (go->pos - msgHelp->position).LengthSquared() < m_gridSize * m_gridSize * 64.f) { go->target = msgHelp->position; }
+			// Radius 4 grids
+			if ((go->type == GameObject::GO_SOLDIER || go->type == GameObject::GO_STRONG_ANT_SOLDIER) && (go->pos - msgHelp->position).LengthSquared() < m_gridSize * m_gridSize * 16.f) { go->target = msgHelp->position; }
 		}
 		return true;
 	}
-	MessageQueenThreat* msgQueen = dynamic_cast<MessageQueenThreat*>(message);
-	if (msgQueen) {
-		for (size_t i = 0; i < m_goList.size(); ++i) {
-			GameObject* go = m_goList[i];
-			if (!go->active || go->teamID != msgQueen->teamID) continue;
-			if (go->type == GameObject::GO_SOLDIER || go->type == GameObject::GO_STRONG_ANT_SOLDIER) { go->target = msgQueen->queen->pos; go->targetEnemy = msgQueen->queen->targetEnemy; }
-		}
-		return true;
-	}
-	return false;
+	// ---------------------------------
+
+	return true;
 }
 
 void SceneSandbox::RenderGO(GameObject* go)
@@ -805,6 +781,17 @@ void SceneSandbox::RenderGO(GameObject* go)
 	// 1. Move to Object Position
 	modelStack.PushMatrix();
 	modelStack.Translate(go->pos.x, go->pos.y, 0.1f);
+
+	// Render PHEROMONE
+	if (go->type == GameObject::GO_PHEROMONE) {
+		modelStack.Scale(go->scale.x, go->scale.y, 1.f);
+		if (go->teamID == 0)
+			RenderMesh(meshList[GEO_TERRITORYRED], false);
+		else
+			RenderMesh(meshList[GEO_TERRITORYBLUE], false);
+		modelStack.PopMatrix();
+		return;
+	}
 
 	// 2. Render THE UNIT (with Rotation)
 	modelStack.PushMatrix();
@@ -867,7 +854,7 @@ void SceneSandbox::RenderGO(GameObject* go)
 
 		// Render Text slightly above food
 		modelStack.PushMatrix();
-		modelStack.Translate(-m_gridSize * 0.3f, m_gridSize * 0.5f, 0.2f); // Offset to top-left of object
+		modelStack.Translate(0.f, 0.f, 0.f);
 		modelStack.Scale(m_gridSize, m_gridSize, 1.f); // Scale text to grid size
 		RenderText(meshList[GEO_TEXT], ss.str(), Color(1, 1, 1)); // White text
 		modelStack.PopMatrix();
@@ -1035,51 +1022,55 @@ void SceneSandbox::Render()
 	ss.precision(3);
 
 	// Stats Column
-	float colX = 60.f;
+	float colX = 50.f;
 
 	// Simulation Stats
+	ss.str(""); ss.precision(5);
+	ss << "FPS:" << fps;
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0, 1, 0), 3, colX, 54);
+
 	ss.str(""); ss << "Speed: " << m_speed;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0, 1, 0), 2.5f, colX, 57);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0, 1, 0), 2.5f, colX, 52);
 	ss.str(""); ss << std::fixed << std::setprecision(1) << "Time: " << m_simulationTime;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 1, 0), 2.5f, colX, 54);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 1, 0), 2.5f, colX, 49);
 
 	// --- RED ANT COLONY (Team 0) ---
 	ss.str(""); ss << "=== RED ANT COLONY ===";
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.3f, 0.3f), 2.5f, colX, 50);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.3f, 0.3f), 2.5f, colX, 45);
 
 	ss.str(""); ss << "Workers: " << m_redWorkerCount;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.6f, 0.6f), 2.0f, colX, 47);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.6f, 0.6f), 2.0f, colX, 42);
 	ss.str(""); ss << "Soldiers: " << m_redSoldierCount;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.6f, 0.6f), 2.0f, colX, 45);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.6f, 0.6f), 2.0f, colX, 40);
 	ss.str(""); ss << "Healers: " << m_redHealerCount;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.6f, 0.6f), 2.0f, colX, 43);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.6f, 0.6f), 2.0f, colX, 38);
 	ss.str(""); ss << "Scouts:  " << m_redScoutCount;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.6f, 0.6f), 2.0f, colX, 41);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.6f, 0.6f), 2.0f, colX, 36);
 	ss.str(""); ss << "Tanks:   " << m_redTankCount;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.6f, 0.6f), 2.0f, colX, 39);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.6f, 0.6f), 2.0f, colX, 34);
 	ss.str(""); ss << "Food:    " << m_redResources;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.6f, 0.6f), 2.0f, colX, 37);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.6f, 0.6f), 2.0f, colX, 32);
 	ss.str(""); ss << "Queen HP:" << (m_redQueen->active ? (int)m_redQueen->health : 0);
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.6f, 0.6f), 2.0f, colX, 35);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.6f, 0.6f), 2.0f, colX, 30);
 
 	// --- BLUE ANT COLONY (Team 1) ---
 	ss.str(""); ss << "=== BLUE ANT COLONY ===";
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.3f, 0.3f, 1), 2.5f, colX, 30);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.3f, 0.3f, 1), 2.5f, colX, 25);
 
 	ss.str(""); ss << "Workers: " << m_blueWorkerCount;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.6f, 0.6f, 1), 2.0f, colX, 27);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.6f, 0.6f, 1), 2.0f, colX, 22);
 	ss.str(""); ss << "Soldiers: " << m_blueSoldierCount;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.6f, 0.6f, 1), 2.0f, colX, 25);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.6f, 0.6f, 1), 2.0f, colX, 20);
 	ss.str(""); ss << "Healers: " << m_blueHealerCount;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.6f, 0.6f, 1), 2.0f, colX, 23);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.6f, 0.6f, 1), 2.0f, colX, 18);
 	ss.str(""); ss << "Scouts:  " << m_blueScoutCount;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.6f, 0.6f, 1), 2.0f, colX, 21);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.6f, 0.6f, 1), 2.0f, colX, 16);
 	ss.str(""); ss << "Tanks:   " << m_blueTankCount;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.6f, 0.6f, 1), 2.0f, colX, 19);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.6f, 0.6f, 1), 2.0f, colX, 14);
 	ss.str(""); ss << "Food:    " << m_blueResources;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.6f, 0.6f, 1), 2.0f, colX, 17);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.6f, 0.6f, 1), 2.0f, colX, 12);
 	ss.str(""); ss << "Queen HP:" << (m_blueQueen->active ? (int)m_blueQueen->health : 0);
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.6f, 0.6f, 1), 2.0f, colX, 15);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.6f, 0.6f, 1), 2.0f, colX, 10);
 
 	if (m_simulationEnded)
 	{

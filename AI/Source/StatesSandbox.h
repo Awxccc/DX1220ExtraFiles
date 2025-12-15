@@ -3,6 +3,7 @@
 #include "State.h"
 #include "GameObject.h"
 #include "Vector3.h"
+#include "Maze.h"
 
 // ================= WORKER STATES =================
 class StateWorkerIdle : public State
@@ -177,26 +178,18 @@ public:
 	virtual void Exit();
 };
 
-class StateScoutReporting : public State {
+class StateScoutReturnToColony : public State {
 	GameObject* m_go;
+	// --- UPDATED: Track Grid Coordinates instead of float position ---
+	MazePt lastGridPos;
 public:
-	StateScoutReporting(const std::string& stateID, GameObject* go) : State(stateID), m_go(go) {}
-	virtual ~StateScoutReporting() {}
+	StateScoutReturnToColony(const std::string& stateID, GameObject* go) : State(stateID), m_go(go) {}
+	virtual ~StateScoutReturnToColony() {}
 	virtual void Enter();
 	virtual void Update(double dt);
 	virtual void Exit();
 };
-
-class StateScoutHiding : public State {
-	GameObject* m_go;
-	float timer;
-public:
-	StateScoutHiding(const std::string& stateID, GameObject* go) : State(stateID), m_go(go) {}
-	virtual ~StateScoutHiding() {}
-	virtual void Enter();
-	virtual void Update(double dt);
-	virtual void Exit();
-};
+class StateScoutHiding : public State { GameObject* m_go; float timer; public: StateScoutHiding(const std::string& stateID, GameObject* go) : State(stateID), m_go(go) {} virtual ~StateScoutHiding() {} virtual void Enter(); virtual void Update(double dt); virtual void Exit(); };
 
 // ================= NEW UNITS: TANK =================
 class StateTankGuarding : public State {

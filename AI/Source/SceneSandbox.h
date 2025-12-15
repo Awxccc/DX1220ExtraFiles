@@ -44,8 +44,10 @@ protected:
 	float m_gridOffset;
 
 	std::vector<bool> m_wallGrid;
-	bool IsGridOccupied(int gridX, int gridY, GameObject* self);
+	std::vector<bool> m_foodGrid;
+	bool IsGridOccupied(int gridX, int gridY);
 	MazePt GetNearestVacantNeighbor(MazePt target, MazePt start);
+	void SpawnTrail(GameObject* startObj, GameObject* endFood, int teamID);
 
 	// Red Colony (Team 0)
 	int m_redWorkerCount;
@@ -67,6 +69,7 @@ protected:
 
 	// Food resources
 	std::vector<Vector3> m_foodLocations;
+	float m_foodSpawnTimer;
 
 	// Simulation state
 	float m_simulationTime;

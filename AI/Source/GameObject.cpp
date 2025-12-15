@@ -33,7 +33,8 @@ GameObject::GameObject(GAMEOBJECT_TYPE typeValue)
 	targetResource(0, 0, 0),
 	viewDir(1, 0, 0),
 	resourceCount(0),
-	harvesterCount(0)
+	harvesterCount(0),
+	isMarked(false)
 {
 	static int count = 0;
 	id = ++count;
