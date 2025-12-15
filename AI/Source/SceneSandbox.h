@@ -47,15 +47,23 @@ protected:
 	bool IsGridOccupied(int gridX, int gridY, GameObject* self);
 	MazePt GetNearestVacantNeighbor(MazePt target, MazePt start);
 
-	// Team statistics
-	int m_speedyAntWorkerCount;
-	int m_speedyAntSoldierCount;
-	int m_strongAntWorkerCount;
-	int m_strongAntWarriorCount;
-	int m_speedyAntResources;
-	int m_strongAntResources;
-	GameObject* m_speedyAntQueen;
-	GameObject* m_strongAntQueen;
+	// Red Colony (Team 0)
+	int m_redWorkerCount;
+	int m_redSoldierCount;
+	int m_redHealerCount;
+	int m_redScoutCount;
+	int m_redTankCount;
+	int m_redResources;
+	GameObject* m_redQueen;
+
+	// Blue Colony (Team 1)
+	int m_blueWorkerCount;
+	int m_blueSoldierCount;
+	int m_blueHealerCount;
+	int m_blueScoutCount;
+	int m_blueTankCount;
+	int m_blueResources;
+	GameObject* m_blueQueen;
 
 	// Food resources
 	std::vector<Vector3> m_foodLocations;
@@ -63,7 +71,7 @@ protected:
 	// Simulation state
 	float m_simulationTime;
 	bool m_simulationEnded;
-	int m_winner; // 0 = Ants, 1 = Beetles, 2 = Draw
+	int m_winner; // 0 = Red, 1 = Blue, 2 = Draw
 
 	// Performance optimization
 	float m_updateTimer;

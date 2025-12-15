@@ -12,9 +12,10 @@
 
 SceneSandbox::SceneSandbox()
 	: m_goList{}, m_spatialGrid{}, m_speed{}, m_worldWidth{}, m_worldHeight{},
-	m_noGrid{}, m_gridSize{}, m_gridOffset{}, m_speedyAntWorkerCount{}, m_speedyAntSoldierCount{},
-	m_strongAntWorkerCount{}, m_strongAntWarriorCount{}, m_speedyAntResources{}, m_strongAntResources{},
-	m_speedyAntQueen{}, m_strongAntQueen{}, m_foodLocations{}, m_simulationTime{},
+	m_noGrid{}, m_gridSize{}, m_gridOffset{},
+	m_redWorkerCount{}, m_redSoldierCount{}, m_redHealerCount{}, m_redScoutCount{}, m_redTankCount{}, m_redResources{},
+	m_blueWorkerCount{}, m_blueSoldierCount{}, m_blueHealerCount{}, m_blueScoutCount{}, m_blueTankCount{}, m_blueResources{},
+	m_redQueen{}, m_blueQueen{}, m_foodLocations{}, m_simulationTime{},
 	m_simulationEnded{}, m_winner{}, m_updateTimer{}, m_updateCycle{}, m_wallGrid{}
 {
 }
@@ -83,60 +84,53 @@ void SceneSandbox::Init()
 	// Register scene with post office
 	PostOffice::GetInstance()->Register("Scene", this);
 
-	// Initialize game state
-	m_speedyAntWorkerCount = 0;
-	m_speedyAntSoldierCount = 0;
-	m_strongAntWorkerCount = 0;
-	m_strongAntWarriorCount = 0;
-	m_speedyAntResources = 0;
-	m_strongAntResources = 0;
-	m_simulationTime = 0.f;
-	m_simulationEnded = false;
-	m_winner = 2; // Draw by default
-	m_updateTimer = 0.f;
-	m_updateCycle = 0;
+	m_redWorkerCount = 0; m_redSoldierCount = 0; m_redHealerCount = 0; m_redScoutCount = 0; m_redTankCount = 0;
+	m_blueWorkerCount = 0; m_blueSoldierCount = 0; m_blueHealerCount = 0; m_blueScoutCount = 0; m_blueTankCount = 0;
+	m_redResources = 0; m_blueResources = 0;
+	m_simulationTime = 0.f; m_simulationEnded = false; m_winner = 2;
+	m_updateTimer = 0.f; m_updateCycle = 0;
 
 	// Spawn Speedy Ant Queen (bottom-left corner)
-	m_speedyAntQueen = FetchGO(GameObject::GO_QUEEN);
-	m_speedyAntQueen->teamID = 0;
-	m_speedyAntQueen->pos.Set(m_gridSize * 3.f + m_gridOffset, m_gridSize * 3.f + m_gridOffset, 0);
-	m_speedyAntQueen->homeBase = m_speedyAntQueen->pos;
-	m_speedyAntQueen->scale.Set(m_gridSize * 1.5f, m_gridSize * 1.5f, 1.f);
-	m_speedyAntQueen->maxHealth = 50.f; m_speedyAntQueen->health = 50.f;
-	m_speedyAntQueen->moveSpeed = 0.f; m_speedyAntQueen->detectionRange = m_gridSize * 8.f;
+	m_redQueen = FetchGO(GameObject::GO_QUEEN);
+	m_redQueen->teamID = 0;
+	m_redQueen->pos.Set(m_gridSize * 3.f + m_gridOffset, m_gridSize * 3.f + m_gridOffset, 0);
+	m_redQueen->homeBase = m_redQueen->pos;
+	m_redQueen->scale.Set(m_gridSize * 1.5f, m_gridSize * 1.5f, 1.f);
+	m_redQueen->maxHealth = 50.f; m_redQueen->health = 50.f;
+	m_redQueen->moveSpeed = 0.f; m_redQueen->detectionRange = m_gridSize * 8.f;
 
-	m_speedyAntQueen->sm = new StateMachine();
-	m_speedyAntQueen->sm->AddState(new StateQueenSpawning("Spawning", m_speedyAntQueen));
-	m_speedyAntQueen->sm->AddState(new StateQueenEmergency("Emergency", m_speedyAntQueen));
-	m_speedyAntQueen->sm->AddState(new StateQueenCooldown("Cooldown", m_speedyAntQueen));
-	m_speedyAntQueen->sm->SetNextState("Spawning");
+	m_redQueen->sm = new StateMachine();
+	m_redQueen->sm->AddState(new StateQueenSpawning("Spawning", m_redQueen));
+	m_redQueen->sm->AddState(new StateQueenEmergency("Emergency", m_redQueen));
+	m_redQueen->sm->AddState(new StateQueenCooldown("Cooldown", m_redQueen));
+	m_redQueen->sm->SetNextState("Spawning");
 
 	// Spawn Strong Ant Queen (top-right corner)
-	m_strongAntQueen = FetchGO(GameObject::GO_STRONG_ANT_QUEEN);
-	m_strongAntQueen->teamID = 1;
-	m_strongAntQueen->pos.Set(m_gridSize * (m_noGrid - 4.f) + m_gridOffset, m_gridSize * (m_noGrid - 4.f) + m_gridOffset, 0);
-	m_strongAntQueen->homeBase = m_strongAntQueen->pos;
-	m_strongAntQueen->scale.Set(m_gridSize * 1.5f, m_gridSize * 1.5f, 1.f);
-	m_strongAntQueen->maxHealth = 50.f; m_strongAntQueen->health = 50.f;
-	m_strongAntQueen->moveSpeed = 0.f; m_strongAntQueen->detectionRange = m_gridSize * 8.f;
+	m_blueQueen = FetchGO(GameObject::GO_STRONG_ANT_QUEEN);
+	m_blueQueen->teamID = 1;
+	m_blueQueen->pos.Set(m_gridSize * (m_noGrid - 4.f) + m_gridOffset, m_gridSize * (m_noGrid - 4.f) + m_gridOffset, 0);
+	m_blueQueen->homeBase = m_blueQueen->pos;
+	m_blueQueen->scale.Set(m_gridSize * 1.5f, m_gridSize * 1.5f, 1.f);
+	m_blueQueen->maxHealth = 50.f; m_blueQueen->health = 50.f;
+	m_blueQueen->moveSpeed = 0.f; m_blueQueen->detectionRange = m_gridSize * 8.f;
 
-	m_strongAntQueen->sm = new StateMachine();
-	m_strongAntQueen->sm->AddState(new StateQueenSpawning("Spawning", m_strongAntQueen));
-	m_strongAntQueen->sm->AddState(new StateQueenEmergency("Emergency", m_strongAntQueen));
-	m_strongAntQueen->sm->AddState(new StateQueenCooldown("Cooldown", m_strongAntQueen));
-	m_strongAntQueen->sm->SetNextState("Spawning");
+	m_blueQueen->sm = new StateMachine();
+	m_blueQueen->sm->AddState(new StateQueenSpawning("Spawning", m_blueQueen));
+	m_blueQueen->sm->AddState(new StateQueenEmergency("Emergency", m_blueQueen));
+	m_blueQueen->sm->AddState(new StateQueenCooldown("Cooldown", m_blueQueen));
+	m_blueQueen->sm->SetNextState("Spawning");
 
 	// Spawn initial workers for both teams
 	for (int i = 0; i < 3; ++i)
 	{
 		// Speedy Ant workers
 		SpawnUnit(MessageSpawnUnit::UNIT_SPEEDY_ANT_WORKER,
-			m_speedyAntQueen->pos + Vector3(Math::RandFloatMinMax(-2, 2) * m_gridSize,
+			m_redQueen->pos + Vector3(Math::RandFloatMinMax(-2, 2) * m_gridSize,
 				Math::RandFloatMinMax(-2, 2) * m_gridSize, 0), 0);
 
 		// Strong workers
 		SpawnUnit(MessageSpawnUnit::UNIT_STRONG_ANT_WORKER,
-			m_strongAntQueen->pos + Vector3(Math::RandFloatMinMax(-2, 2) * m_gridSize,
+			m_blueQueen->pos + Vector3(Math::RandFloatMinMax(-2, 2) * m_gridSize,
 				Math::RandFloatMinMax(-2, 2) * m_gridSize, 0), 1);
 	}
 
@@ -144,14 +138,21 @@ void SceneSandbox::Init()
 	for (int i = 0; i < 2; ++i)
 	{
 		SpawnUnit(MessageSpawnUnit::UNIT_SPEEDY_ANT_SOLDIER,
-			m_speedyAntQueen->pos + Vector3(Math::RandFloatMinMax(-3, 3) * m_gridSize,
+			m_redQueen->pos + Vector3(Math::RandFloatMinMax(-3, 3) * m_gridSize,
 				Math::RandFloatMinMax(-3, 3) * m_gridSize, 0), 0);
 
 		SpawnUnit(MessageSpawnUnit::UNIT_STRONG_ANT_SOLDIER,
-			m_strongAntQueen->pos + Vector3(Math::RandFloatMinMax(-3, 3) * m_gridSize,
+			m_blueQueen->pos + Vector3(Math::RandFloatMinMax(-3, 3) * m_gridSize,
 				Math::RandFloatMinMax(-3, 3) * m_gridSize, 0), 1);
 	}
 
+	//SpawnUnit(MessageSpawnUnit::UNIT_HEALER, m_redQueen->pos + Vector3(2, 0, 0), 0);
+	SpawnUnit(MessageSpawnUnit::UNIT_SCOUT, m_redQueen->pos + Vector3(0, 2, 0), 0);
+	//SpawnUnit(MessageSpawnUnit::UNIT_TANK, m_redQueen->pos + Vector3(2, 2, 0), 0);
+
+	//SpawnUnit(MessageSpawnUnit::UNIT_HEALER, m_blueQueen->pos + Vector3(-2, 0, 0), 1);
+	SpawnUnit(MessageSpawnUnit::UNIT_SCOUT, m_blueQueen->pos + Vector3(0, -2, 0), 1);
+	//SpawnUnit(MessageSpawnUnit::UNIT_TANK, m_blueQueen->pos + Vector3(-2, -2, 0), 1);
 
 	// Spawn food resources in center and various locations
 	m_foodLocations.clear();
@@ -196,6 +197,8 @@ void SceneSandbox::Init()
 		food->scale.Set(m_gridSize * 0.8f, m_gridSize * 0.8f, 1.f);
 		food->moveSpeed = 0.f;
 		food->health = 1.f;
+		food->resourceCount = 25;
+		food->harvesterCount = 0;
 		m_foodLocations.push_back(food->pos);
 	}
 
@@ -228,7 +231,7 @@ void SceneSandbox::SpawnUnit(MessageSpawnUnit::UNIT_TYPE unitType, Vector3 posit
 	case MessageSpawnUnit::UNIT_SPEEDY_ANT_WORKER:
 		unit = FetchGO(GameObject::GO_WORKER);
 		unit->teamID = 0;
-		unit->homeBase = m_speedyAntQueen->pos;
+		unit->homeBase = m_redQueen->pos;
 		unit->maxHealth = 5.f; unit->health = 5.f; unit->attackPower = 0.2f; unit->moveSpeed = 6.f; unit->baseSpeed = 6.f;
 		unit->detectionRange = m_gridSize * 7.f; unit->attackRange = m_gridSize * 0.8f;
 
@@ -238,13 +241,13 @@ void SceneSandbox::SpawnUnit(MessageSpawnUnit::UNIT_TYPE unitType, Vector3 posit
 		unit->sm->AddState(new StateWorkerGathering("Gathering", unit));
 		unit->sm->AddState(new StateWorkerFleeing("Fleeing", unit));
 		unit->sm->SetNextState("Idle");
-		m_speedyAntWorkerCount++;
+		m_redWorkerCount++;
 		break;
 
 	case MessageSpawnUnit::UNIT_SPEEDY_ANT_SOLDIER:
 		unit = FetchGO(GameObject::GO_SOLDIER);
 		unit->teamID = 0;
-		unit->homeBase = m_speedyAntQueen->pos;
+		unit->homeBase = m_redQueen->pos;
 		unit->maxHealth = 10.f; unit->health = 10.f; unit->attackPower = 1.5f; unit->moveSpeed = 4.f; unit->baseSpeed = 4.f;
 		unit->detectionRange = m_gridSize * 9.f; unit->attackRange = m_gridSize * 1.2f;
 
@@ -254,13 +257,13 @@ void SceneSandbox::SpawnUnit(MessageSpawnUnit::UNIT_TYPE unitType, Vector3 posit
 		unit->sm->AddState(new StateSoldierResting("Resting", unit)); // Merged Defending
 		unit->sm->AddState(new StateSoldierRetreating("Retreating", unit));
 		unit->sm->SetNextState("Patrolling");
-		m_speedyAntSoldierCount++;
+		m_redSoldierCount++;
 		break;
 
 	case MessageSpawnUnit::UNIT_STRONG_ANT_WORKER:
 		unit = FetchGO(GameObject::GO_WORKER);
 		unit->teamID = 1;
-		unit->homeBase = m_strongAntQueen->pos;
+		unit->homeBase = m_blueQueen->pos;
 		unit->maxHealth = 15.f; unit->health = 15.f; unit->attackPower = 1.0f; unit->moveSpeed = 3.0f; unit->baseSpeed = 3.f;
 		unit->detectionRange = m_gridSize * 5.f; unit->attackRange = m_gridSize * 0.7f;
 
@@ -270,13 +273,13 @@ void SceneSandbox::SpawnUnit(MessageSpawnUnit::UNIT_TYPE unitType, Vector3 posit
 		unit->sm->AddState(new StateWorkerGathering("Gathering", unit));
 		unit->sm->AddState(new StateWorkerFleeing("Fleeing", unit));
 		unit->sm->SetNextState("Idle");
-		m_strongAntWorkerCount++;
+		m_blueWorkerCount++;
 		break;
 
 	case MessageSpawnUnit::UNIT_STRONG_ANT_SOLDIER:
 		unit = FetchGO(GameObject::GO_SOLDIER);
 		unit->teamID = 1;
-		unit->homeBase = m_strongAntQueen->pos;
+		unit->homeBase = m_blueQueen->pos;
 		unit->maxHealth = 30.f; unit->health = 30.f; unit->attackPower = 5.0f; unit->moveSpeed = 2.0f; unit->baseSpeed = 2.f;
 		unit->detectionRange = m_gridSize * 6.f; unit->attackRange = m_gridSize * 1.3f;
 
@@ -286,12 +289,12 @@ void SceneSandbox::SpawnUnit(MessageSpawnUnit::UNIT_TYPE unitType, Vector3 posit
 		unit->sm->AddState(new StateSoldierResting("Resting", unit));
 		unit->sm->AddState(new StateSoldierRetreating("Retreating", unit));
 		unit->sm->SetNextState("Patrolling");
-		m_strongAntWarriorCount++;
+		m_blueSoldierCount++;
 		break;
 	case MessageSpawnUnit::UNIT_HEALER:
 		unit = FetchGO(GameObject::GO_HEALER);
 		unit->teamID = teamID;
-		unit->homeBase = (teamID == 0) ? m_speedyAntQueen->pos : m_strongAntQueen->pos;
+		unit->homeBase = (teamID == 0) ? m_redQueen->pos : m_blueQueen->pos;
 		unit->maxHealth = 8.f; unit->health = 8.f; unit->moveSpeed = 4.f; unit->baseSpeed = 4.f;
 		unit->sm = new StateMachine();
 		unit->sm->AddState(new StateHealerIdle("Idle", unit));
@@ -303,7 +306,7 @@ void SceneSandbox::SpawnUnit(MessageSpawnUnit::UNIT_TYPE unitType, Vector3 posit
 	case MessageSpawnUnit::UNIT_SCOUT:
 		unit = FetchGO(GameObject::GO_SCOUT);
 		unit->teamID = teamID;
-		unit->homeBase = (teamID == 0) ? m_speedyAntQueen->pos : m_strongAntQueen->pos;
+		unit->homeBase = (teamID == 0) ? m_redQueen->pos : m_blueQueen->pos;
 		unit->maxHealth = 5.f; unit->health = 5.f; unit->moveSpeed = 8.f; unit->baseSpeed = 8.f;
 		unit->detectionRange = m_gridSize * 15.f; // Huge vision
 		unit->sm = new StateMachine();
@@ -316,7 +319,7 @@ void SceneSandbox::SpawnUnit(MessageSpawnUnit::UNIT_TYPE unitType, Vector3 posit
 	case MessageSpawnUnit::UNIT_TANK:
 		unit = FetchGO(GameObject::GO_TANK);
 		unit->teamID = teamID;
-		unit->homeBase = (teamID == 0) ? m_speedyAntQueen->pos : m_strongAntQueen->pos;
+		unit->homeBase = (teamID == 0) ? m_redQueen->pos : m_blueQueen->pos;
 		unit->maxHealth = 40.f; unit->health = 40.f; unit->moveSpeed = 1.5f; unit->baseSpeed = 1.5f;
 		unit->attackPower = 1.0f; unit->attackRange = m_gridSize * 0.5f;
 		unit->sm = new StateMachine();
@@ -333,6 +336,7 @@ void SceneSandbox::SpawnUnit(MessageSpawnUnit::UNIT_TYPE unitType, Vector3 posit
 		unit->pos.Set(gx * m_gridSize + m_gridOffset, gy * m_gridSize + m_gridOffset, 0);
 		unit->target = unit->pos;
 		unit->scale.Set(m_gridSize, m_gridSize, 1.f);
+		unit->targetFoodItem = nullptr;
 	}
 }
 
@@ -445,8 +449,8 @@ void SceneSandbox::Update(double dt)
 		{
 			m_simulationEnded = true;
 			// Determine winner based on resources and population
-			int speedyAntTotal = m_speedyAntWorkerCount + m_speedyAntSoldierCount + m_speedyAntResources;
-			int strongAntTotal = m_strongAntWorkerCount + m_strongAntWarriorCount + m_strongAntResources;
+			int speedyAntTotal = m_redWorkerCount + m_redSoldierCount + m_redHealerCount + m_redScoutCount + m_redTankCount + m_redResources;
+			int strongAntTotal = m_blueWorkerCount + m_blueSoldierCount + m_blueHealerCount + m_blueScoutCount + m_blueTankCount + m_blueResources;
 
 			if (speedyAntTotal > strongAntTotal)
 				m_winner = 0;
@@ -454,25 +458,10 @@ void SceneSandbox::Update(double dt)
 				m_winner = 1;
 			else
 				m_winner = 2;
-
-			std::cout << "\n=== SIMULATION ENDED ===" << std::endl;
-			std::cout << "Winner: " << (m_winner == 0 ? "SPEEDY ANT COLONY" :
-				m_winner == 1 ? "STRONG ANT COLONY" : "DRAW") << std::endl;
 		}
 
-		// Check if queens are dead
-		if (!m_speedyAntQueen->active)
-		{
-			m_simulationEnded = true;
-			m_winner = 1;
-			std::cout << "\n=== SPEEDY ANT QUEEN ELIMINATED - STRONG ANTS WIN ===" << std::endl;
-		}
-		if (!m_strongAntQueen->active)
-		{
-			m_simulationEnded = true;
-			m_winner = 0;
-			std::cout << "\n=== STRONG ANT QUEEN ELIMINATED - SPEEDY ANTS WIN ===" << std::endl;
-		}
+		if (!m_redQueen->active) { m_simulationEnded = true; m_winner = 1; }
+		if (!m_blueQueen->active) { m_simulationEnded = true; m_winner = 0; }
 	}
 
 	// Update cycle for optimization (stagger updates)
@@ -568,22 +557,25 @@ void SceneSandbox::Update(double dt)
 	}
 
 	// Update counts
-	int totalObjects = 0;
-	m_speedyAntWorkerCount = 0; m_speedyAntSoldierCount = 0; m_strongAntWorkerCount = 0; m_strongAntWarriorCount = 0;
-	for (size_t i = 0; i < m_goList.size(); ++i) {
-		GameObject* go = m_goList[i];
+	m_redWorkerCount = 0; m_redSoldierCount = 0; m_redHealerCount = 0; m_redScoutCount = 0; m_redTankCount = 0;
+	m_blueWorkerCount = 0; m_blueSoldierCount = 0; m_blueHealerCount = 0; m_blueScoutCount = 0; m_blueTankCount = 0;
+	for (auto go : m_goList) {
 		if (!go->active) continue;
-		totalObjects++;
-		if (go->type == GameObject::GO_WORKER) {
-			if (go->teamID == 0) m_speedyAntWorkerCount++;
-			else m_strongAntWorkerCount++;
+		if (go->teamID == 0) {
+			if (go->type == GameObject::GO_WORKER) m_redWorkerCount++;
+			else if (go->type == GameObject::GO_SOLDIER) m_redSoldierCount++;
+			else if (go->type == GameObject::GO_HEALER) m_redHealerCount++;
+			else if (go->type == GameObject::GO_SCOUT) m_redScoutCount++;
+			else if (go->type == GameObject::GO_TANK) m_redTankCount++;
 		}
-		else if (go->type == GameObject::GO_SOLDIER) {
-			if (go->teamID == 0) m_speedyAntSoldierCount++;
-			else m_strongAntWarriorCount++;
+		else if (go->teamID == 1) {
+			if (go->type == GameObject::GO_WORKER) m_blueWorkerCount++;
+			else if (go->type == GameObject::GO_SOLDIER) m_blueSoldierCount++;
+			else if (go->type == GameObject::GO_HEALER) m_blueHealerCount++;
+			else if (go->type == GameObject::GO_SCOUT) m_blueScoutCount++;
+			else if (go->type == GameObject::GO_TANK) m_blueTankCount++;
 		}
 	}
-	SceneData::GetInstance()->SetObjectCount(totalObjects);
 }
 
 void SceneSandbox::DetectNearbyEntities(GameObject* go)
@@ -653,19 +645,25 @@ void SceneSandbox::DetectNearbyEntities(GameObject* go)
 void SceneSandbox::FindNearestResource(GameObject* go)
 {
 	go->targetResource.SetZero();
+	go->targetFoodItem = nullptr;
 	float nearestDistSq = FLT_MAX;
 
 	for (std::vector<GameObject*>::iterator it = m_goList.begin(); it != m_goList.end(); ++it)
 	{
 		GameObject* resource = (GameObject*)*it;
-		if (!resource->active || resource->type != GameObject::GO_FOOD)
-			continue;
+
+		// --- UPDATED CONDITION ---
+		if (!resource->active || resource->type != GameObject::GO_FOOD) continue;
+		// Check for worker limit (Max 5) and if food is empty
+		if (resource->harvesterCount >= 5 || resource->resourceCount <= 0) continue;
+		// -------------------------
 
 		float distSq = (go->pos - resource->pos).LengthSquared();
 		if (distSq < nearestDistSq)
 		{
 			nearestDistSq = distSq;
 			go->targetResource = resource->pos;
+			go->targetFoodItem = resource; // Store the pointer!
 		}
 	}
 }
@@ -753,35 +751,21 @@ bool SceneSandbox::Handle(Message* message)
 {
 	MessageSpawnUnit* msgSpawn = dynamic_cast<MessageSpawnUnit*>(message);
 	if (msgSpawn) {
-		// Define Costs
-		int cost = 0;
-		if (msgSpawn->type == MessageSpawnUnit::UNIT_SPEEDY_ANT_SOLDIER || msgSpawn->type == MessageSpawnUnit::UNIT_STRONG_ANT_SOLDIER)
-			cost = 5;
-		else
-			cost = 2;
+		int cost = 2; // Default
+		// Higher cost for Soldiers/Tanks
+		if (msgSpawn->type == MessageSpawnUnit::UNIT_SPEEDY_ANT_SOLDIER || msgSpawn->type == MessageSpawnUnit::UNIT_STRONG_ANT_SOLDIER || msgSpawn->type == MessageSpawnUnit::UNIT_TANK) cost = 5;
 
-		// Check and Deduct Resources
-		bool spawned = false;
-		if (msgSpawn->spawner->teamID == 0) { // Speedy
-			if (m_speedyAntResources >= cost) {
-				m_speedyAntResources -= cost;
-				SpawnUnit(msgSpawn->type, msgSpawn->position, 0);
-				spawned = true;
-			}
+		if (msgSpawn->spawner->teamID == 0) { // Red
+			if (m_redResources >= cost) { m_redResources -= cost; SpawnUnit(msgSpawn->type, msgSpawn->position, 0); }
 		}
-		else { // Strong
-			if (m_strongAntResources >= cost) {
-				m_strongAntResources -= cost;
-				SpawnUnit(msgSpawn->type, msgSpawn->position, 1);
-				spawned = true;
-			}
+		else { // Blue
+			if (m_blueResources >= cost) { m_blueResources -= cost; SpawnUnit(msgSpawn->type, msgSpawn->position, 1); }
 		}
-		// If resource check failed, we just ignore the request. The Queen will try again later.
 		return true;
 	}
+	MessageResourceDelivered* msgRes = dynamic_cast<MessageResourceDelivered*>(message);
+	if (msgRes) { if (msgRes->teamID == 0) m_redResources += msgRes->resourceAmount; else m_blueResources += msgRes->resourceAmount; return true; }
 
-	MessageResourceDelivered* msgResource = dynamic_cast<MessageResourceDelivered*>(message);
-	if (msgResource) { if (msgResource->teamID == 0) m_speedyAntResources += msgResource->resourceAmount; else m_strongAntResources += msgResource->resourceAmount; return true; }
 	MessageUnitDied* msgDied = dynamic_cast<MessageUnitDied*>(message); if (msgDied) { return true; }
 	MessageResourceFound* msgFound = dynamic_cast<MessageResourceFound*>(message); if (msgFound) { return true; }
 
@@ -818,8 +802,12 @@ bool SceneSandbox::Handle(Message* message)
 
 void SceneSandbox::RenderGO(GameObject* go)
 {
+	// 1. Move to Object Position
 	modelStack.PushMatrix();
 	modelStack.Translate(go->pos.x, go->pos.y, 0.1f);
+
+	// 2. Render THE UNIT (with Rotation)
+	modelStack.PushMatrix();
 	float angle = Math::RadianToDegree(atan2(go->viewDir.y, go->viewDir.x));
 	modelStack.Rotate(angle - 90.0f, 0, 0, 1);
 	modelStack.Scale(go->scale.x, go->scale.y, go->scale.z);
@@ -839,33 +827,53 @@ void SceneSandbox::RenderGO(GameObject* go)
 		else RenderMesh(meshList[GEO_STRONG_ANT_QUEEN], false);
 		break;
 	case GameObject::GO_HEALER:
-		RenderMesh(meshList[GEO_WHITEQUAD], false);
+		modelStack.Scale(0.8f, 0.8f, 1.f);
+		meshList[GEO_WHITEQUAD]->material.kAmbient.Set(0.2f, 1.0f, 0.2f); // Green
+		RenderMesh(meshList[GEO_WHITEQUAD], true);
 		break;
 	case GameObject::GO_SCOUT:
-		RenderMesh(meshList[GEO_WHITEQUAD], false);
+		modelStack.Scale(0.6f, 0.6f, 1.f);
+		meshList[GEO_WHITEQUAD]->material.kAmbient.Set(1.0f, 1.0f, 0.0f); // Yellow
+		RenderMesh(meshList[GEO_WHITEQUAD], true);
 		break;
 	case GameObject::GO_TANK:
-		RenderMesh(meshList[GEO_WHITEQUAD], false);
+		modelStack.Scale(1.2f, 1.2f, 1.f);
+		meshList[GEO_WHITEQUAD]->material.kAmbient.Set(0.5f, 0.5f, 0.5f); // Grey
+		RenderMesh(meshList[GEO_WHITEQUAD], true);
 		break;
 	case GameObject::GO_FOOD:
 		RenderMesh(meshList[GEO_FOOD], false);
 		break;
 	}
-
-	// Health bar for combat units
-	if (go->type != GameObject::GO_FOOD)
+	modelStack.PopMatrix(); // End Unit Rotation
+	//Health bar
+	if (go->type != GameObject::GO_FOOD && go->health < go->maxHealth)
 	{
 		float healthPercent = go->health / go->maxHealth;
 		modelStack.PushMatrix();
-		modelStack.Translate(0, m_gridSize * 0.6f, 0.1f);
-		modelStack.Scale(healthPercent, 0.1f, 1.f);
-		meshList[GEO_WHITEQUAD]->material.kAmbient.Set(
-			1.f - healthPercent, healthPercent, 0.f);
-		RenderMesh(meshList[GEO_WHITEQUAD], true);
+		modelStack.Translate(0, m_gridSize * 0.7f, 0.1f);
+		modelStack.Scale(healthPercent * m_gridSize, m_gridSize * 0.15f, 1.f);
+
+		if (healthPercent > 0.5f) RenderMesh(meshList[GEO_HPBAR_GREEN], false);
+		else RenderMesh(meshList[GEO_HPBAR_RED], false);
+
+		modelStack.PopMatrix();
+	}
+	// --- RENDER FOOD RESOURCE COUNT ---
+	if (go->type == GameObject::GO_FOOD)
+	{
+		std::ostringstream ss;
+		ss << go->resourceCount;
+
+		// Render Text slightly above food
+		modelStack.PushMatrix();
+		modelStack.Translate(-m_gridSize * 0.3f, m_gridSize * 0.5f, 0.2f); // Offset to top-left of object
+		modelStack.Scale(m_gridSize, m_gridSize, 1.f); // Scale text to grid size
+		RenderText(meshList[GEO_TEXT], ss.str(), Color(1, 1, 1)); // White text
 		modelStack.PopMatrix();
 	}
 
-	modelStack.PopMatrix();
+	modelStack.PopMatrix(); // End Object Position
 }
 
 void SceneSandbox::Render()
@@ -998,9 +1006,9 @@ void SceneSandbox::Render()
 
 					modelStack.PushMatrix();
 					// Position text slightly offset from the unit center (top-right)
-					modelStack.Translate(go->pos.x + m_gridSize * 0.2f, go->pos.y + m_gridSize * 0.2f, 0.2f);
+					modelStack.Translate(go->pos.x + m_gridSize * 0.5f, go->pos.y + m_gridSize * 0.2f, 0.2f);
 					// Scale text appropriate to grid size
-					modelStack.Scale(m_gridSize, m_gridSize, 1.f);
+					modelStack.Scale(m_gridSize*2.f, m_gridSize*2.f, 1.f);
 					RenderText(meshList[GEO_TEXT], ss.str(), Color(1, 1, 1)); // White text
 					modelStack.PopMatrix();
 				}
@@ -1029,80 +1037,55 @@ void SceneSandbox::Render()
 	// Stats Column
 	float colX = 60.f;
 
-	ss.str("");
-	ss << "Speed: " << m_speed;
+	// Simulation Stats
+	ss.str(""); ss << "Speed: " << m_speed;
 	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0, 1, 0), 2.5f, colX, 57);
+	ss.str(""); ss << std::fixed << std::setprecision(1) << "Time: " << m_simulationTime;
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 1, 0), 2.5f, colX, 54);
 
-	ss.str("");
-	ss.precision(5);
-	ss << "FPS: " << fps;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0, 1, 0), 2.5f, colX, 54);
+	// --- RED ANT COLONY (Team 0) ---
+	ss.str(""); ss << "=== RED ANT COLONY ===";
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.3f, 0.3f), 2.5f, colX, 50);
 
-	ss.str("");
-	ss << std::fixed << std::setprecision(1);
-	ss << "Time: " << m_simulationTime << "s / 300s";
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 1, 0), 2.5f, colX, 51);
+	ss.str(""); ss << "Workers: " << m_redWorkerCount;
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.6f, 0.6f), 2.0f, colX, 47);
+	ss.str(""); ss << "Soldiers: " << m_redSoldierCount;
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.6f, 0.6f), 2.0f, colX, 45);
+	ss.str(""); ss << "Healers: " << m_redHealerCount;
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.6f, 0.6f), 2.0f, colX, 43);
+	ss.str(""); ss << "Scouts:  " << m_redScoutCount;
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.6f, 0.6f), 2.0f, colX, 41);
+	ss.str(""); ss << "Tanks:   " << m_redTankCount;
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.6f, 0.6f), 2.0f, colX, 39);
+	ss.str(""); ss << "Food:    " << m_redResources;
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.6f, 0.6f), 2.0f, colX, 37);
+	ss.str(""); ss << "Queen HP:" << (m_redQueen->active ? (int)m_redQueen->health : 0);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.6f, 0.6f), 2.0f, colX, 35);
 
-	// Speedy Ant Colony Stats
-	ss.str("");
-	ss << "=== SPEEDY ANTS COLONY ===";
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.3f, 0.3f), 2.5f, colX, 46);
+	// --- BLUE ANT COLONY (Team 1) ---
+	ss.str(""); ss << "=== BLUE ANT COLONY ===";
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.3f, 0.3f, 1), 2.5f, colX, 30);
 
-	ss.str("");
-	ss << "Workers: " << m_speedyAntWorkerCount;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.5f, 0.5f), 2.5f, colX, 43);
+	ss.str(""); ss << "Workers: " << m_blueWorkerCount;
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.6f, 0.6f, 1), 2.0f, colX, 27);
+	ss.str(""); ss << "Soldiers: " << m_blueSoldierCount;
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.6f, 0.6f, 1), 2.0f, colX, 25);
+	ss.str(""); ss << "Healers: " << m_blueHealerCount;
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.6f, 0.6f, 1), 2.0f, colX, 23);
+	ss.str(""); ss << "Scouts:  " << m_blueScoutCount;
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.6f, 0.6f, 1), 2.0f, colX, 21);
+	ss.str(""); ss << "Tanks:   " << m_blueTankCount;
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.6f, 0.6f, 1), 2.0f, colX, 19);
+	ss.str(""); ss << "Food:    " << m_blueResources;
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.6f, 0.6f, 1), 2.0f, colX, 17);
+	ss.str(""); ss << "Queen HP:" << (m_blueQueen->active ? (int)m_blueQueen->health : 0);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.6f, 0.6f, 1), 2.0f, colX, 15);
 
-	ss.str("");
-	ss << "Soldiers: " << m_speedyAntSoldierCount;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.5f, 0.5f), 2.5f, colX, 40);
-
-	ss.str("");
-	ss << "Resources: " << m_speedyAntResources;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.5f, 0.5f), 2.5f, colX, 37);
-
-	ss.str("");
-	ss << "Queen HP: " << (m_speedyAntQueen->active ? static_cast<int>(m_speedyAntQueen->health) : 0);
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.5f, 0.5f), 2.5f, colX, 34);
-
-	// Strong Ant colony Stats
-	ss.str("");
-	ss << "=== STRONG ANTS COLONY ===";
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.3f, 0.3f, 1), 2.5f, colX, 28);
-
-	ss.str("");
-	ss << "Workers: " << m_strongAntWorkerCount;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.5f, 0.5f, 1), 2.5f, colX, 25);
-
-	ss.str("");
-	ss << "Soldiers: " << m_strongAntWarriorCount;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.5f, 0.5f, 1), 2.5f, colX, 22);
-
-	ss.str("");
-	ss << "Resources: " << m_strongAntResources;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.5f, 0.5f, 1), 2.5f, colX, 19);
-
-	ss.str("");
-	ss << "Queen HP: " << (m_strongAntQueen->active ? static_cast<int>(m_strongAntQueen->health) : 0);
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.5f, 0.5f, 1), 2.5f, colX, 16);
-
-	// Win condition
 	if (m_simulationEnded)
 	{
-		ss.str("");
-		ss << "=== SIMULATION ENDED ===";
-		RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 1, 0), 3.f, 20, 30);
-
-		ss.str("");
-		if (m_winner == 0)
-			ss << "WINNER: SPEEDY ANT COLONY";
-		else if (m_winner == 1)
-			ss << "WINNER: STRONG ANT COLONY";
-		else
-			ss << "RESULT: DRAW";
-		RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 1, 1), 3.f, 20, 27);
+		ss.str(""); ss << "WINNER: " << (m_winner == 0 ? "RED COLONY" : m_winner == 1 ? "BLUE COLONY" : "DRAW");
+		RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 1, 1), 3.f, 20, 30);
 	}
-
-	RenderTextOnScreen(meshList[GEO_TEXT], "Speedy Ants vs Strong Ants Sandbox", Color(0, 1, 0), 3, 2, 2);
 }
 void SceneSandbox::Exit()
 {

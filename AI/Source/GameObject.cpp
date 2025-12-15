@@ -26,7 +26,14 @@ GameObject::GameObject(GAMEOBJECT_TYPE typeValue)
 	isCarryingResource(false),
 	targetEnemy(nullptr),
 	spawnCooldown(0.f),
-	unitsSpawned(0)
+	unitsSpawned(0),
+
+	targetAlly(nullptr),
+	targetFoodItem(nullptr),
+	targetResource(0, 0, 0),
+	viewDir(1, 0, 0),
+	resourceCount(0),
+	harvesterCount(0)
 {
 	static int count = 0;
 	id = ++count;

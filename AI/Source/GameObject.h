@@ -118,6 +118,9 @@ struct GameObject : public ObjectBase
 	int unitsSpawned;
 	Vector3 viewDir;
 	GameObject* targetAlly;
+	GameObject* targetFoodItem;
+	int resourceCount;
+	int harvesterCount;
 };
 
 #endif

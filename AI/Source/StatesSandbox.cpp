@@ -18,6 +18,34 @@ Vector3 GetRandomGridPosAround(Vector3 center, float range)
 	return Vector3(nX * gridSize + offset, nY * gridSize + offset, 0);
 }
 
+Vector3 GetRandomEntrance(int teamID)
+{
+	float gridSize = SceneData::GetInstance()->GetGridSize();
+	float offset = SceneData::GetInstance()->GetGridOffset();
+
+	int gx, gy;
+	int choice = Math::RandIntMinMax(0, 3); // 4 gaps per base
+
+	if (teamID == 0) // Red Colony (Bottom Left)
+	{
+		// Gaps at (3,7), (4,7) [Top Wall] and (7,3), (7,4) [Right Wall]
+		if (choice == 0) { gx = 3; gy = 7; }
+		else if (choice == 1) { gx = 4; gy = 7; }
+		else if (choice == 2) { gx = 7; gy = 3; }
+		else { gx = 7; gy = 4; }
+	}
+	else // Blue Colony (Top Right)
+	{
+		// Gaps at (26,22), (27,22) [Bottom Wall] and (22,26), (22,27) [Left Wall]
+		if (choice == 0) { gx = 26; gy = 22; }
+		else if (choice == 1) { gx = 27; gy = 22; }
+		else if (choice == 2) { gx = 22; gy = 26; }
+		else { gx = 22; gy = 27; }
+	}
+
+	return Vector3(gx * gridSize + offset, gy * gridSize + offset, 0);
+}
+
 // ================= WORKER STATES =================
 StateWorkerIdle::StateWorkerIdle(const std::string& stateID, GameObject* go) : State(stateID), m_go(go) {}
 StateWorkerIdle::~StateWorkerIdle() {}
@@ -27,9 +55,9 @@ void StateWorkerIdle::Exit() {}
 
 StateWorkerSearching::StateWorkerSearching(const std::string& stateID, GameObject* go) : State(stateID), m_go(go) {}
 StateWorkerSearching::~StateWorkerSearching() {}
-void StateWorkerSearching::Enter() { m_go->moveSpeed = m_go->baseSpeed; m_go->targetResource.SetZero(); }
+void StateWorkerSearching::Enter() { m_go->moveSpeed = m_go->baseSpeed; m_go->targetResource.SetZero(); m_go->targetFoodItem = nullptr; }
 void StateWorkerSearching::Update(double dt) {
-	if (m_go->targetResource.IsZero()) {
+	if (!m_go->targetFoodItem) { // If no target food
 		if ((m_go->pos - m_go->target).LengthSquared() < 0.1f) {
 			m_go->target = GetRandomGridPosAround(m_go->pos, 10);
 		}
@@ -41,36 +69,60 @@ void StateWorkerSearching::Exit() {}
 
 StateWorkerGathering::StateWorkerGathering(const std::string& stateID, GameObject* go) : State(stateID), m_go(go) {}
 StateWorkerGathering::~StateWorkerGathering() {}
-void StateWorkerGathering::Enter() { m_go->moveSpeed = m_go->baseSpeed * 0.66f; m_go->gatherTimer = 0.f; m_go->isCarryingResource = false; }
+void StateWorkerGathering::Enter() {
+	m_go->moveSpeed = m_go->baseSpeed * 0.66f;
+	m_go->gatherTimer = 0.f;
+	m_go->isCarryingResource = false;
+	// RESERVE SPOT
+	if (m_go->targetFoodItem) m_go->targetFoodItem->harvesterCount++;
+}
 void StateWorkerGathering::Update(double dt) {
 	if (m_go->targetEnemy != nullptr) { m_go->sm->SetNextState("Fleeing"); return; }
 	float gridSize = SceneData::GetInstance()->GetGridSize();
-	// NEW: Interaction Range covers neighbor tile + margin (e.g., 1.5 tiles)
 	float interactSq = (gridSize * 1.5f) * (gridSize * 1.5f);
 
 	if (!m_go->isCarryingResource) {
-		if (!m_go->targetResource.IsZero()) {
-			m_go->target = m_go->targetResource;
-			// NEW: Check distance with larger range
-			if ((m_go->pos - m_go->targetResource).LengthSquared() < interactSq) {
+		// CHECK IF FOOD STILL EXISTS AND VALID
+		if (m_go->targetFoodItem && m_go->targetFoodItem->active) {
+			m_go->target = m_go->targetFoodItem->pos;
+
+			if ((m_go->pos - m_go->targetFoodItem->pos).LengthSquared() < interactSq) {
 				m_go->gatherTimer += (float)dt;
 				if (m_go->gatherTimer > 2.f) {
-					m_go->isCarryingResource = true; m_go->carriedResources = 1; m_go->gatherTimer = 0.f;
-					PostOffice::GetInstance()->Send("Scene", new MessageResourceFound(m_go, m_go->targetResource, m_go->teamID));
+					// HARVEST LOGIC
+					m_go->isCarryingResource = true;
+					m_go->carriedResources = 1;
+					m_go->gatherTimer = 0.f;
+
+					// Decrement Food Resource
+					m_go->targetFoodItem->resourceCount--;
+					if (m_go->targetFoodItem->resourceCount <= 0) m_go->targetFoodItem->active = false; // Depleted!
+
+					// Note: We don't send MessageResourceFound constantly anymore, just deliver.
 				}
 			}
 		}
-		else { m_go->sm->SetNextState("Searching"); }
+		else {
+			// Food gone or stolen
+			m_go->targetFoodItem = nullptr;
+			m_go->sm->SetNextState("Searching");
+		}
 	}
 	else {
 		m_go->target = m_go->homeBase;
 		if ((m_go->pos - m_go->homeBase).LengthSquared() < interactSq) {
 			PostOffice::GetInstance()->Send("Scene", new MessageResourceDelivered(m_go, m_go->carriedResources, m_go->teamID));
-			m_go->isCarryingResource = false; m_go->carriedResources = 0; m_go->targetResource.SetZero(); m_go->sm->SetNextState("Idle");
+			m_go->isCarryingResource = false;
+			m_go->carriedResources = 0;
+			m_go->targetFoodItem = nullptr;
+			m_go->sm->SetNextState("Idle");
 		}
 	}
 }
-void StateWorkerGathering::Exit() {}
+void StateWorkerGathering::Exit() {
+	// RELEASE SPOT
+	if (m_go->targetFoodItem) m_go->targetFoodItem->harvesterCount--;
+}
 
 StateWorkerFleeing::StateWorkerFleeing(const std::string& stateID, GameObject* go) : State(stateID), m_go(go) {}
 StateWorkerFleeing::~StateWorkerFleeing() {}
@@ -93,9 +145,15 @@ void StateSoldierPatrolling::Enter() { m_go->moveSpeed = m_go->baseSpeed; patrol
 void StateSoldierPatrolling::Update(double dt) {
 	patrolTimer += (float)dt;
 	if (m_go->targetEnemy && m_go->targetEnemy->active) { PostOffice::GetInstance()->Send("Scene", new MessageEnemySpotted(m_go, m_go->targetEnemy, m_go->teamID)); m_go->sm->SetNextState("Attacking"); return; }
+
+	// --- UPDATED PATROL LOGIC ---
 	if (patrolTimer > 4.f || patrolTarget.IsZero() || (m_go->pos - m_go->target).LengthSquared() < 0.5f) {
-		patrolTimer = 0.f; patrolTarget = GetRandomGridPosAround(m_go->homeBase, 5.f); m_go->target = patrolTarget;
+		patrolTimer = 0.f;
+		// Use helper to get a random entrance location based on Team ID
+		patrolTarget = GetRandomEntrance(m_go->teamID);
+		m_go->target = patrolTarget;
 	}
+	// ---------------------------
 }
 void StateSoldierPatrolling::Exit() {}
 
@@ -149,17 +207,35 @@ void StateQueenSpawning::Update(double dt) {
 	if (m_go->spawnCooldown > 3.f) {
 		m_go->spawnCooldown = 0.f;
 
-		// NEW: Random Chance (50% Soldier, 50% Worker)
-		bool spawnSoldier = (Math::RandIntMinMax(0, 100) < 50);
-
+		// --- UPDATED SPAWN LOGIC: EQUAL CHANCE ---
+		int rng = Math::RandIntMinMax(0, 4); // 0 to 4 (5 types)
 		MessageSpawnUnit::UNIT_TYPE type;
-		if (m_go->teamID == 0) type = spawnSoldier ? MessageSpawnUnit::UNIT_SPEEDY_ANT_SOLDIER : MessageSpawnUnit::UNIT_SPEEDY_ANT_WORKER;
-		else type = spawnSoldier ? MessageSpawnUnit::UNIT_STRONG_ANT_SOLDIER : MessageSpawnUnit::UNIT_STRONG_ANT_WORKER;
 
-		// Send request. If resources fail, nothing happens, loop continues.
+		if (m_go->teamID == 0) // RED TEAM
+		{
+			switch (rng) {
+			case 0: type = MessageSpawnUnit::UNIT_SPEEDY_ANT_WORKER; break;
+			case 1: type = MessageSpawnUnit::UNIT_SPEEDY_ANT_SOLDIER; break;
+			case 2: type = MessageSpawnUnit::UNIT_HEALER; break;
+			case 3: type = MessageSpawnUnit::UNIT_SCOUT; break;
+			case 4: type = MessageSpawnUnit::UNIT_TANK; break;
+			default: type = MessageSpawnUnit::UNIT_SPEEDY_ANT_WORKER; break;
+			}
+		}
+		else // BLUE TEAM
+		{
+			switch (rng) {
+			case 0: type = MessageSpawnUnit::UNIT_STRONG_ANT_WORKER; break;
+			case 1: type = MessageSpawnUnit::UNIT_STRONG_ANT_SOLDIER; break;
+			case 2: type = MessageSpawnUnit::UNIT_HEALER; break;
+			case 3: type = MessageSpawnUnit::UNIT_SCOUT; break;
+			case 4: type = MessageSpawnUnit::UNIT_TANK; break;
+			default: type = MessageSpawnUnit::UNIT_STRONG_ANT_WORKER; break;
+			}
+		}
+		// -----------------------------------------
+
 		PostOffice::GetInstance()->Send("Scene", new MessageSpawnUnit(m_go, type, m_go->pos));
-
-		// We assume success or wait for next cycle. No complex feedback loop needed for this level.
 		m_go->unitsSpawned++;
 		m_go->sm->SetNextState("Cooldown");
 	}

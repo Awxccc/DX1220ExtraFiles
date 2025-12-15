@@ -199,6 +199,8 @@ void SceneBase::Init()
 	meshList[GEO_SANDBOXBG]->textureID = LoadTGA("Image//sandboxbg.tga");
 	meshList[GEO_TERRITORYBLUE] = MeshBuilder::GenerateQuad("territoryblue", Color(0.2f, 0.2f, 0.7f));
 	meshList[GEO_TERRITORYRED] = MeshBuilder::GenerateQuad("territoryred", Color(0.7f, 0.2f, 0.2f));
+	meshList[GEO_HPBAR_GREEN] = MeshBuilder::GenerateQuad("hpgreen", Color(0, 1, 0));
+	meshList[GEO_HPBAR_RED] = MeshBuilder::GenerateQuad("hpred", Color(1, 0, 0));
 
 	bLightEnabled = false;
 }
