@@ -133,7 +133,7 @@ void StateSoldierResting::Exit() {}
 
 StateSoldierRetreating::StateSoldierRetreating(const std::string& stateID, GameObject* go) : State(stateID), m_go(go) {}
 StateSoldierRetreating::~StateSoldierRetreating() {}
-void StateSoldierRetreating::Enter() { m_go->moveSpeed = 6.f; PostOffice::GetInstance()->Send("Scene", new MessageRequestHelp(m_go, m_go->pos, m_go->teamID)); }
+void StateSoldierRetreating::Enter() { m_go->moveSpeed = m_go->baseSpeed * 1.5f; PostOffice::GetInstance()->Send("Scene", new MessageRequestHelp(m_go, m_go->pos, m_go->teamID)); }
 void StateSoldierRetreating::Update(double dt) { m_go->target = m_go->homeBase; if ((m_go->pos - m_go->homeBase).LengthSquared() < 4.f) m_go->sm->SetNextState("Resting"); }
 void StateSoldierRetreating::Exit() {}
 

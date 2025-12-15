@@ -152,6 +152,7 @@ void SceneSandbox::Init()
 				Math::RandFloatMinMax(-3, 3) * m_gridSize, 0), 1);
 	}
 
+
 	// Spawn food resources in center and various locations
 	m_foodLocations.clear();
 	int foodCount = Math::RandIntMinMax(15, 25);
@@ -495,13 +496,17 @@ void SceneSandbox::Update(double dt)
 
 		float step = go->moveSpeed * static_cast<float>(dt) * m_speed;
 
+		Vector3 moveVec(0, 0, 0);
+
 		if (!go->path.empty())
 		{
 			MazePt nextPt = go->path.front();
-			// Collision Removed: Units can stack
 			Vector3 nextPos(nextPt.x * m_gridSize + m_gridOffset, nextPt.y * m_gridSize + m_gridOffset, go->pos.z);
 			Vector3 dir = nextPos - go->pos;
 			float dist = dir.Length();
+
+			moveVec = dir; // Capture direction
+
 			if (dist <= step) { go->pos = nextPos; go->path.erase(go->path.begin()); }
 			else { go->pos += dir.Normalized() * step; }
 		}
@@ -509,9 +514,16 @@ void SceneSandbox::Update(double dt)
 		{
 			Vector3 center = Vector3(gridX * m_gridSize + m_gridOffset, gridY * m_gridSize + m_gridOffset, go->pos.z);
 			if ((go->pos - center).LengthSquared() > 0.001f) {
-				Vector3 dir = center - go->pos; float dist = dir.Length();
+				Vector3 dir = center - go->pos;
+				moveVec = dir; // Capture direction
+				float dist = dir.Length();
 				if (dist <= step) go->pos = center; else go->pos += dir.Normalized() * step;
 			}
+		}
+
+		// NEW: Update Facing Direction if moving
+		if (moveVec.LengthSquared() > 0.001f) {
+			go->viewDir = moveVec.Normalized();
 		}
 	}
 
@@ -751,6 +763,8 @@ void SceneSandbox::RenderGO(GameObject* go)
 {
 	modelStack.PushMatrix();
 	modelStack.Translate(go->pos.x, go->pos.y, 0.1f);
+	float angle = Math::RadianToDegree(atan2(go->viewDir.y, go->viewDir.x));
+	modelStack.Rotate(angle - 90.0f, 0, 0, 1);
 	modelStack.Scale(go->scale.x, go->scale.y, go->scale.z);
 
 	switch (go->type)

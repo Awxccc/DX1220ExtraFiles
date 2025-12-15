@@ -34,6 +34,7 @@ struct GameObject : public ObjectBase
 		GO_STRONG_ANT_QUEEN,
 		GO_FOOD,
 		GO_NEST,
+		GO_ELITE_GUARD,
 
 		GO_TOTAL, //must be last
 	};
@@ -46,29 +47,7 @@ struct GameObject : public ObjectBase
 		STATE_DEAD,
 
 		//Assignment 1
-		STATE_IDLE,
-		STATE_SEARCHING,
-		STATE_GATHERING,
-		STATE_FLEEING,
-		STATE_PATROLLING,
-		STATE_ATTACKING,
-		STATE_DEFENDING,
-		STATE_RETREATING,
-		STATE_SPAWNING,
-		STATE_EMERGENCY,
-		STATE_COOLDOWN,
-		STATE_BOOSTING,
-		STATE_FORAGING,
-		STATE_COLLECTING,
-		STATE_ESCAPING,
-		STATE_HUNTING,
-		STATE_COMBAT,
-		STATE_RESTING,
-		STATE_WITHDRAWING,
-		STATE_PRODUCING,
-		STATE_ALERT,
-		STATE_WAITING,
-		STATE_WARMODE,
+
 	};
 	GAMEOBJECT_TYPE type;
 	Vector3 pos;
@@ -134,6 +113,7 @@ struct GameObject : public ObjectBase
 	bool isCarryingResource;
 	float spawnCooldown;
 	int unitsSpawned;
+	Vector3 viewDir;
 };
 
 #endif
