@@ -181,3 +181,101 @@ StateQueenCooldown::~StateQueenCooldown() {}
 void StateQueenCooldown::Enter() { timer = 0.f; }
 void StateQueenCooldown::Update(double dt) { timer += (float)dt; if (timer > 2.f) m_go->sm->SetNextState("Spawning"); }
 void StateQueenCooldown::Exit() {}
+
+// ================= HEALER STATES =================
+void StateHealerIdle::Enter() { m_go->moveSpeed = 0.f; }
+void StateHealerIdle::Update(double dt) {
+	if (m_go->targetAlly && m_go->targetAlly->active && m_go->targetAlly->health < m_go->targetAlly->maxHealth) {
+		m_go->sm->SetNextState("Traveling");
+	}
+}
+void StateHealerIdle::Exit() {}
+
+void StateHealerTraveling::Enter() { m_go->moveSpeed = m_go->baseSpeed; }
+void StateHealerTraveling::Update(double dt) {
+	if (!m_go->targetAlly || !m_go->targetAlly->active) {
+		m_go->targetAlly = nullptr; m_go->sm->SetNextState("Idle"); return;
+	}
+	m_go->target = m_go->targetAlly->pos;
+	if ((m_go->pos - m_go->target).LengthSquared() < SceneData::GetInstance()->GetGridSize() * 2.f) {
+		m_go->sm->SetNextState("Healing");
+	}
+}
+void StateHealerTraveling::Exit() {}
+
+void StateHealerHealing::Enter() { m_go->moveSpeed = 0.f; timer = 0.f; }
+void StateHealerHealing::Update(double dt) {
+	timer += (float)dt;
+	if (!m_go->targetAlly || !m_go->targetAlly->active) { m_go->sm->SetNextState("Idle"); return; }
+	m_go->targetAlly->health += (float)dt * 5.0f; // Heal 5 HP/sec
+	if (m_go->targetAlly->health >= m_go->targetAlly->maxHealth) {
+		m_go->targetAlly->health = m_go->targetAlly->maxHealth; m_go->targetAlly = nullptr; m_go->sm->SetNextState("Idle");
+	}
+}
+void StateHealerHealing::Exit() {}
+
+// ================= SCOUT STATES =================
+void StateScoutPatrolling::Enter() { m_go->moveSpeed = m_go->baseSpeed; timer = 5.f; }
+void StateScoutPatrolling::Update(double dt) {
+	timer += (float)dt;
+	if (m_go->targetEnemy && m_go->targetEnemy->active) { m_go->sm->SetNextState("Reporting"); return; }
+	if (timer > 2.f || (m_go->pos - m_go->target).LengthSquared() < 1.f) {
+		// Patrol far (radius 15) using existing helper
+		m_go->target = GetRandomGridPosAround(m_go->homeBase, 15.f); timer = 0.f;
+	}
+}
+void StateScoutPatrolling::Exit() {}
+
+void StateScoutReporting::Enter() {
+	m_go->moveSpeed = m_go->baseSpeed * 1.5f;
+	if (m_go->targetEnemy) PostOffice::GetInstance()->Send("Scene", new MessageEnemySpotted(m_go, m_go->targetEnemy, m_go->teamID));
+}
+void StateScoutReporting::Update(double dt) {
+	m_go->target = m_go->homeBase;
+	if ((m_go->pos - m_go->homeBase).LengthSquared() < 5.f) { m_go->targetEnemy = nullptr; m_go->sm->SetNextState("Patrolling"); }
+	if (m_go->health < m_go->maxHealth * 0.5f) m_go->sm->SetNextState("Hiding");
+}
+void StateScoutReporting::Exit() {}
+
+void StateScoutHiding::Enter() {
+	m_go->moveSpeed = m_go->baseSpeed; timer = 0.f;
+	float max = SceneData::GetInstance()->GetGridSize() * SceneData::GetInstance()->GetNumGrid();
+	if (m_go->teamID == 0) m_go->target.Set(0, max, 0); else m_go->target.Set(max, 0, 0);
+}
+void StateScoutHiding::Update(double dt) { timer += (float)dt; if (timer > 5.f) m_go->sm->SetNextState("Patrolling"); }
+void StateScoutHiding::Exit() {}
+
+// ================= TANK STATES =================
+void StateTankGuarding::Enter() { m_go->moveSpeed = m_go->baseSpeed; }
+void StateTankGuarding::Update(double dt) {
+	m_go->target = m_go->homeBase;
+	if (m_go->targetEnemy && m_go->targetEnemy->active) {
+		if ((m_go->pos - m_go->targetEnemy->pos).LengthSquared() < m_go->attackRange * m_go->attackRange) m_go->sm->SetNextState("Blocking");
+	}
+	if (m_go->health < m_go->maxHealth * 0.4f) m_go->sm->SetNextState("Recovering");
+}
+void StateTankGuarding::Exit() {}
+
+void StateTankBlocking::Enter() { m_go->moveSpeed = 0.f; attackTimer = 0.f; }
+void StateTankBlocking::Update(double dt) {
+	if (!m_go->targetEnemy || !m_go->targetEnemy->active || (m_go->pos - m_go->targetEnemy->pos).LengthSquared() > m_go->attackRange * m_go->attackRange * 1.5f) {
+		m_go->targetEnemy = nullptr; m_go->sm->SetNextState("Guarding"); return;
+	}
+	attackTimer += (float)dt;
+	if (attackTimer > 1.5f) {
+		m_go->targetEnemy->health -= m_go->attackPower; attackTimer = 0.f;
+		if (m_go->targetEnemy->health <= 0) {
+			PostOffice::GetInstance()->Send("Scene", new MessageUnitDied(m_go->targetEnemy, m_go->targetEnemy->teamID, m_go->targetEnemy->type));
+			m_go->targetEnemy->active = false;
+		}
+	}
+	if (m_go->health < m_go->maxHealth * 0.3f) m_go->sm->SetNextState("Recovering");
+}
+void StateTankBlocking::Exit() {}
+
+void StateTankRecovering::Enter() { m_go->moveSpeed = m_go->baseSpeed; m_go->target = m_go->homeBase; }
+void StateTankRecovering::Update(double dt) {
+	m_go->health += (float)dt * 2.0f;
+	if (m_go->health >= m_go->maxHealth) { m_go->health = m_go->maxHealth; m_go->sm->SetNextState("Guarding"); }
+}
+void StateTankRecovering::Exit() {}

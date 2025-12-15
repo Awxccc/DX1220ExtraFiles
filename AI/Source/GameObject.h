@@ -32,6 +32,9 @@ struct GameObject : public ObjectBase
 		GO_STRONG_ANT_WORKER,
 		GO_STRONG_ANT_SOLDIER,
 		GO_STRONG_ANT_QUEEN,
+		GO_HEALER,
+		GO_SCOUT,
+		GO_TANK,
 		GO_FOOD,
 		GO_NEST,
 		GO_ELITE_GUARD,
@@ -114,6 +117,7 @@ struct GameObject : public ObjectBase
 	float spawnCooldown;
 	int unitsSpawned;
 	Vector3 viewDir;
+	GameObject* targetAlly;
 };
 
 #endif

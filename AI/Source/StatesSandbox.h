@@ -132,3 +132,100 @@ public:
 	virtual void Update(double dt);
 	virtual void Exit();
 };
+
+// ================= NEW UNITS: HEALER =================
+class StateHealerIdle : public State {
+	GameObject* m_go;
+public:
+	StateHealerIdle(const std::string& stateID, GameObject* go) : State(stateID), m_go(go) {}
+	virtual ~StateHealerIdle() {}
+	virtual void Enter();
+	virtual void Update(double dt);
+	virtual void Exit();
+};
+
+class StateHealerTraveling : public State {
+	GameObject* m_go;
+public:
+	StateHealerTraveling(const std::string& stateID, GameObject* go) : State(stateID), m_go(go) {}
+	virtual ~StateHealerTraveling() {}
+	virtual void Enter();
+	virtual void Update(double dt);
+	virtual void Exit();
+};
+
+class StateHealerHealing : public State {
+	GameObject* m_go;
+	float timer;
+public:
+	StateHealerHealing(const std::string& stateID, GameObject* go) : State(stateID), m_go(go) {}
+	virtual ~StateHealerHealing() {}
+	virtual void Enter();
+	virtual void Update(double dt);
+	virtual void Exit();
+};
+
+// ================= NEW UNITS: SCOUT =================
+class StateScoutPatrolling : public State {
+	GameObject* m_go;
+	float timer;
+public:
+	StateScoutPatrolling(const std::string& stateID, GameObject* go) : State(stateID), m_go(go) {}
+	virtual ~StateScoutPatrolling() {}
+	virtual void Enter();
+	virtual void Update(double dt);
+	virtual void Exit();
+};
+
+class StateScoutReporting : public State {
+	GameObject* m_go;
+public:
+	StateScoutReporting(const std::string& stateID, GameObject* go) : State(stateID), m_go(go) {}
+	virtual ~StateScoutReporting() {}
+	virtual void Enter();
+	virtual void Update(double dt);
+	virtual void Exit();
+};
+
+class StateScoutHiding : public State {
+	GameObject* m_go;
+	float timer;
+public:
+	StateScoutHiding(const std::string& stateID, GameObject* go) : State(stateID), m_go(go) {}
+	virtual ~StateScoutHiding() {}
+	virtual void Enter();
+	virtual void Update(double dt);
+	virtual void Exit();
+};
+
+// ================= NEW UNITS: TANK =================
+class StateTankGuarding : public State {
+	GameObject* m_go;
+public:
+	StateTankGuarding(const std::string& stateID, GameObject* go) : State(stateID), m_go(go) {}
+	virtual ~StateTankGuarding() {}
+	virtual void Enter();
+	virtual void Update(double dt);
+	virtual void Exit();
+};
+
+class StateTankBlocking : public State {
+	GameObject* m_go;
+	float attackTimer;
+public:
+	StateTankBlocking(const std::string& stateID, GameObject* go) : State(stateID), m_go(go) {}
+	virtual ~StateTankBlocking() {}
+	virtual void Enter();
+	virtual void Update(double dt);
+	virtual void Exit();
+};
+
+class StateTankRecovering : public State {
+	GameObject* m_go;
+public:
+	StateTankRecovering(const std::string& stateID, GameObject* go) : State(stateID), m_go(go) {}
+	virtual ~StateTankRecovering() {}
+	virtual void Enter();
+	virtual void Update(double dt);
+	virtual void Exit();
+};

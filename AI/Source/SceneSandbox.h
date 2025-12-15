@@ -31,6 +31,7 @@ protected:
 	bool IsInTerritory(Vector3 pos, int teamID) const;
 	void UpdateSpatialGrid();
 	GameObject* GetNearestEnemy(Vector3 pos, int teamID, float maxRange);
+	void FindNearestInjuredAlly(GameObject* go);
 
 	// Game state
 	std::vector<GameObject*> m_goList;

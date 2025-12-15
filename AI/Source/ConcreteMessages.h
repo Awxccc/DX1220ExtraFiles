@@ -101,6 +101,9 @@ struct MessageSpawnUnit : public Message
 		UNIT_SPEEDY_ANT_SOLDIER,
 		UNIT_STRONG_ANT_WORKER,
 		UNIT_STRONG_ANT_SOLDIER,
+		UNIT_HEALER,
+        UNIT_SCOUT,
+        UNIT_TANK,
 	};
 	MessageSpawnUnit(GameObject* goValue, UNIT_TYPE unitType, Vector3 spawnPos)
 		: spawner(goValue), type(unitType), position(spawnPos) {

@@ -288,6 +288,43 @@ void SceneSandbox::SpawnUnit(MessageSpawnUnit::UNIT_TYPE unitType, Vector3 posit
 		unit->sm->SetNextState("Patrolling");
 		m_strongAntWarriorCount++;
 		break;
+	case MessageSpawnUnit::UNIT_HEALER:
+		unit = FetchGO(GameObject::GO_HEALER);
+		unit->teamID = teamID;
+		unit->homeBase = (teamID == 0) ? m_speedyAntQueen->pos : m_strongAntQueen->pos;
+		unit->maxHealth = 8.f; unit->health = 8.f; unit->moveSpeed = 4.f; unit->baseSpeed = 4.f;
+		unit->sm = new StateMachine();
+		unit->sm->AddState(new StateHealerIdle("Idle", unit));
+		unit->sm->AddState(new StateHealerTraveling("Traveling", unit));
+		unit->sm->AddState(new StateHealerHealing("Healing", unit));
+		unit->sm->SetNextState("Idle");
+		break;
+
+	case MessageSpawnUnit::UNIT_SCOUT:
+		unit = FetchGO(GameObject::GO_SCOUT);
+		unit->teamID = teamID;
+		unit->homeBase = (teamID == 0) ? m_speedyAntQueen->pos : m_strongAntQueen->pos;
+		unit->maxHealth = 5.f; unit->health = 5.f; unit->moveSpeed = 8.f; unit->baseSpeed = 8.f;
+		unit->detectionRange = m_gridSize * 15.f; // Huge vision
+		unit->sm = new StateMachine();
+		unit->sm->AddState(new StateScoutPatrolling("Patrolling", unit));
+		unit->sm->AddState(new StateScoutReporting("Reporting", unit));
+		unit->sm->AddState(new StateScoutHiding("Hiding", unit));
+		unit->sm->SetNextState("Patrolling");
+		break;
+
+	case MessageSpawnUnit::UNIT_TANK:
+		unit = FetchGO(GameObject::GO_TANK);
+		unit->teamID = teamID;
+		unit->homeBase = (teamID == 0) ? m_speedyAntQueen->pos : m_strongAntQueen->pos;
+		unit->maxHealth = 40.f; unit->health = 40.f; unit->moveSpeed = 1.5f; unit->baseSpeed = 1.5f;
+		unit->attackPower = 1.0f; unit->attackRange = m_gridSize * 0.5f;
+		unit->sm = new StateMachine();
+		unit->sm->AddState(new StateTankGuarding("Guarding", unit));
+		unit->sm->AddState(new StateTankBlocking("Blocking", unit));
+		unit->sm->AddState(new StateTankRecovering("Recovering", unit));
+		unit->sm->SetNextState("Guarding");
+		break;
 	}
 
 	if (unit) {
@@ -459,11 +496,14 @@ void SceneSandbox::Update(double dt)
 		GameObject* go = m_goList[i];
 		if (go->active && (cycleCheck % 3) == m_updateCycle) {
 			DetectNearbyEntities(go);
-			if (go->type == GameObject::GO_SPEEDY_ANT_WORKER || go->type == GameObject::GO_STRONG_ANT_WORKER) FindNearestResource(go);
+			if (go->type == GameObject::GO_SPEEDY_ANT_WORKER || go->type == GameObject::GO_STRONG_ANT_WORKER)
+				FindNearestResource(go);
+			if (go->type == GameObject::GO_HEALER)
+				FindNearestInjuredAlly(go);
+			// ----------------
 		}
 		cycleCheck++;
 	}
-
 	// Movement
 	for (size_t i = 0; i < m_goList.size(); ++i)
 	{
@@ -622,6 +662,19 @@ void SceneSandbox::FindNearestResource(GameObject* go)
 		{
 			nearestDistSq = distSq;
 			go->targetResource = resource->pos;
+		}
+	}
+}
+
+void SceneSandbox::FindNearestInjuredAlly(GameObject* go)
+{
+	go->targetAlly = nullptr;
+	float nearestDistSq = FLT_MAX;
+	for (GameObject* other : m_goList) {
+		if (!other->active || other == go) continue;
+		if (other->teamID == go->teamID && other->health < other->maxHealth) {
+			float distSq = (go->pos - other->pos).LengthSquared();
+			if (distSq < nearestDistSq) { nearestDistSq = distSq; go->targetAlly = other; }
 		}
 	}
 }
@@ -786,6 +839,15 @@ void SceneSandbox::RenderGO(GameObject* go)
 		break;
 	case GameObject::GO_STRONG_ANT_QUEEN:
 		RenderMesh(meshList[GEO_STRONG_ANT_QUEEN], false);
+		break;
+	case GameObject::GO_HEALER:
+		RenderMesh(meshList[GEO_WHITEQUAD], false);
+		break;
+	case GameObject::GO_SCOUT:
+		RenderMesh(meshList[GEO_WHITEQUAD], false);
+		break;
+	case GameObject::GO_TANK:
+		RenderMesh(meshList[GEO_WHITEQUAD], false);
 		break;
 	case GameObject::GO_FOOD:
 		RenderMesh(meshList[GEO_FOOD], false);
