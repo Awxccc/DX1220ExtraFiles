@@ -124,7 +124,8 @@ struct GameObject : public ObjectBase
 	int resourceCount;
 	int harvesterCount;
 	bool isMarked;
-
+	Vector3 prevPos;
+	float idleTimer;
 };
 
 #endif

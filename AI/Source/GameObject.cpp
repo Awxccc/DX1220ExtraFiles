@@ -34,7 +34,9 @@ GameObject::GameObject(GAMEOBJECT_TYPE typeValue)
 	viewDir(1, 0, 0),
 	resourceCount(0),
 	harvesterCount(0),
-	isMarked(false)
+	isMarked(false),
+	prevPos(0, 0, 0),
+	idleTimer(0.f)
 {
 	static int count = 0;
 	id = ++count;

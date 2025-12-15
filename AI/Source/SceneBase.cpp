@@ -21,7 +21,7 @@ SceneBase::~SceneBase()
 void SceneBase::Init()
 {
 	// Black background
-	glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	// Enable depth test
 	glEnable(GL_DEPTH_TEST);
 	// Accept fragment if it closer to the camera than the former one
@@ -39,6 +39,10 @@ void SceneBase::Init()
 
 	m_programID = LoadShaders( "Shader//comg.vertexshader", "Shader//comg.fragmentshader" );
 	
+#define LOAD_TEXTURE_MESH(GEO_ENUM, TEXTURE_PATH) \
+		meshList[GEO_ENUM] = MeshBuilder::GenerateQuad(#GEO_ENUM, Color(1, 1, 1), 1.f); \
+		meshList[GEO_ENUM]->textureID = LoadTGA(TEXTURE_PATH);
+
 	// Get a handle for our uniform
 	m_parameters[U_MVP] = glGetUniformLocation(m_programID, "MVP");
 	//m_parameters[U_MODEL] = glGetUniformLocation(m_programID, "M");
@@ -177,30 +181,26 @@ void SceneBase::Init()
 	meshList[GEO_PIPE]->textureID = LoadTGA("Image//pipe-green.tga");
 
 	//Assignment 1
-	meshList[GEO_SPEEDY_ANT_WORKER] = MeshBuilder::GenerateQuad("speedyAntworker", Color(0, 1, 0));
-	meshList[GEO_SPEEDY_ANT_WORKER]->textureID = LoadTGA("Image//speedyAntworker.tga");
-	meshList[GEO_SPEEDY_ANT_SOLDIER] = MeshBuilder::GenerateQuad("speedyAntsoldier", Color(1, 0, 0));
-	meshList[GEO_SPEEDY_ANT_SOLDIER]->textureID = LoadTGA("Image//speedyAntsoldier.tga");
-	meshList[GEO_SPEEDY_ANT_QUEEN] = MeshBuilder::GenerateQuad("speedyAntqueen", Color(0, 1, 0));
-	meshList[GEO_SPEEDY_ANT_QUEEN]->textureID = LoadTGA("Image//speedyAntqueen.tga");
-	meshList[GEO_STRONG_ANT_WORKER] = MeshBuilder::GenerateQuad("strongAntworker", Color(0.5f, 0.5f, 0.5f));
-	meshList[GEO_STRONG_ANT_WORKER]->textureID = LoadTGA("Image//strongAntworker.tga");
-	meshList[GEO_STRONG_ANT_SOLDIER] = MeshBuilder::GenerateQuad("strongAntwarrior", Color(1, 0, 0));
-	meshList[GEO_STRONG_ANT_SOLDIER]->textureID = LoadTGA("Image//strongAntwarrior.tga");
-	meshList[GEO_STRONG_ANT_QUEEN] = MeshBuilder::GenerateQuad("strongAntqueen", Color(1, 1, 1));
-	meshList[GEO_STRONG_ANT_QUEEN]->textureID = LoadTGA("Image//strongAntqueen.tga");
-	meshList[GEO_FOOD] = MeshBuilder::GenerateQuad("food", Color(0, 0, 0.5f));
+
+	LOAD_TEXTURE_MESH(GEO_WORKER_RED, "Image//Ant_Worker_Red.tga");
+	LOAD_TEXTURE_MESH(GEO_SOLDIER_RED, "Image//Ant_Soldier_Red.tga");
+	LOAD_TEXTURE_MESH(GEO_QUEEN_RED, "Image//Ant_Queen_Red.tga");
+	LOAD_TEXTURE_MESH(GEO_HEALER_RED, "Image//Ant_Healer_Red.tga");
+	LOAD_TEXTURE_MESH(GEO_SCOUT_RED, "Image//Ant_Scout_Red.tga");
+	LOAD_TEXTURE_MESH(GEO_TANK_RED, "Image//Ant_Tank_Red.tga");
+	meshList[GEO_FOOD] = MeshBuilder::GenerateQuad("food", Color(1, 1, 1));
 	meshList[GEO_FOOD]->textureID = LoadTGA("Image//food.tga");
-	meshList[GEO_NEST] = MeshBuilder::GenerateQuad("nest", Color(1, 0, 1));
-	meshList[GEO_NEST]->textureID = LoadTGA("Image//nest.tga");
 	meshList[GEO_GRASS] = MeshBuilder::GenerateQuad("grass", Color(0.2f, 0.7f, 0.2f));
-	meshList[GEO_GRASS]->textureID = LoadTGA("Image//grass.tga");
-	meshList[GEO_SANDBOXBG] = MeshBuilder::GenerateQuad("sandboxbg", Color(0.76f, 0.7f, 0.5f));
-	meshList[GEO_SANDBOXBG]->textureID = LoadTGA("Image//sandboxbg.tga");
 	meshList[GEO_TERRITORYBLUE] = MeshBuilder::GenerateQuad("territoryblue", Color(0.2f, 0.2f, 0.7f));
 	meshList[GEO_TERRITORYRED] = MeshBuilder::GenerateQuad("territoryred", Color(0.7f, 0.2f, 0.2f));
 	meshList[GEO_HPBAR_GREEN] = MeshBuilder::GenerateQuad("hpgreen", Color(0, 1, 0));
 	meshList[GEO_HPBAR_RED] = MeshBuilder::GenerateQuad("hpred", Color(1, 0, 0));
+	LOAD_TEXTURE_MESH(GEO_WORKER_BLUE, "Image//Ant_Worker_Blue.tga");
+	LOAD_TEXTURE_MESH(GEO_SOLDIER_BLUE, "Image//Ant_Soldier_Blue.tga");
+	LOAD_TEXTURE_MESH(GEO_QUEEN_BLUE, "Image//Ant_Queen_Blue.tga");
+	LOAD_TEXTURE_MESH(GEO_HEALER_BLUE, "Image//Ant_Healer_Blue.tga");
+	LOAD_TEXTURE_MESH(GEO_SCOUT_BLUE, "Image//Ant_Scout_Blue.tga");
+	LOAD_TEXTURE_MESH(GEO_TANK_BLUE, "Image//Ant_Tank_Blue.tga");
 
 	bLightEnabled = false;
 }

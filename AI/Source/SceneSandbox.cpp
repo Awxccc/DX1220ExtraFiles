@@ -15,7 +15,7 @@ SceneSandbox::SceneSandbox()
 	m_noGrid{}, m_gridSize{}, m_gridOffset{},
 	m_redWorkerCount{}, m_redResources{}, m_blueWorkerCount{}, m_blueResources{},
 	m_redQueen{}, m_blueQueen{}, m_simulationTime{}, m_simulationEnded{}, m_winner{}, m_updateTimer{}, m_updateCycle{},
-	m_wallGrid{}, m_foodGrid{}
+	m_wallGrid{}, m_foodGrid{}, m_coloniesDetected(false)
 {
 }
 
@@ -377,36 +377,8 @@ void SceneSandbox::Update(double dt)
 			UpdateSpatialGrid();
 		}
 
-		// --- NEW: SPAWN FOOD OVER TIME ---
-		m_foodSpawnTimer += (float)dt * m_speed;
-		if (m_foodSpawnTimer > 20.0f) {
-			m_foodSpawnTimer = 0.f;
-			// Try 10 times to find valid spot
-			for (int i = 0; i < 10; ++i) {
-				int gridX = Math::RandIntMinMax(2, m_noGrid - 3);
-				int gridY = Math::RandIntMinMax(2, m_noGrid - 3);
-				if (IsGridOccupied(gridX, gridY)) continue;
-				// Check Base Exclusion
-				if (gridX <= 8 && gridY <= 8) continue;
-				if (gridX >= 21 && gridY >= 21) continue;
-				// Check Trails
-				bool onTrail = false;
-				for (auto go : m_goList) {
-					if (go->active && go->type == GameObject::GO_PHEROMONE) {
-						int px = (int)(go->pos.x / m_gridSize); int py = (int)(go->pos.y / m_gridSize);
-						if (px == gridX && py == gridY) { onTrail = true; break; }
-					}
-				}
-				if (onTrail) continue;
-
-				// Spawn
-				GameObject* food = FetchGO(GameObject::GO_FOOD);
-				food->pos.Set(gridX * m_gridSize + m_gridOffset, gridY * m_gridSize + m_gridOffset, 0);
-				food->scale.Set(m_gridSize * 0.8f, m_gridSize * 0.8f, 1.f);
-				food->moveSpeed = 0.f; food->health = 1.f; food->resourceCount = 25; food->harvesterCount = 0; food->isMarked = false;
-				m_foodGrid[Get1DIndex(gridX, gridY)] = true;
-				break; // Success
-			}
+		if (m_simulationTime >= 240.f && !m_coloniesDetected) {
+			m_coloniesDetected = true;
 		}
 
 		// State machine updates
@@ -445,6 +417,23 @@ void SceneSandbox::Update(double dt)
 			if (!go->active) continue;
 			if (go->type == GameObject::GO_PHEROMONE) { if (go->targetFoodItem == nullptr || !go->targetFoodItem->active || go->targetFoodItem->resourceCount <= 0) go->active = false; continue; }
 			if (go->moveSpeed <= 0.f) continue;
+
+			if ((go->pos - go->prevPos).LengthSquared() < 0.001f) {
+				go->idleTimer += (float)dt * m_speed;
+				if (go->idleTimer > 3.0f) { // Stuck for 3s? Go home.
+					go->idleTimer = 0.f;
+					go->target = go->homeBase;
+					go->path.clear();
+					// Clear targets to force reset
+					go->targetFoodItem = nullptr;
+					go->targetEnemy = nullptr;
+					go->isCarryingResource = false;
+				}
+			}
+			else {
+				go->idleTimer = 0.f;
+			}
+			go->prevPos = go->pos;
 
 			int gridX = static_cast<int>(go->pos.x / m_gridSize); int gridY = static_cast<int>(go->pos.y / m_gridSize);
 			MazePt targetPt(static_cast<int>(go->target.x / m_gridSize), static_cast<int>(go->target.y / m_gridSize));
@@ -630,12 +619,35 @@ void SceneSandbox::FindNearestInjuredAlly(GameObject* go)
 {
 	go->targetAlly = nullptr;
 	float nearestDistSq = FLT_MAX;
+	GameObject* nearestSoldier = nullptr; // Fallback target
+	float nearestSoldierDist = FLT_MAX;
+
 	for (GameObject* other : m_goList) {
 		if (!other->active || other == go) continue;
-		if (other->teamID == go->teamID && other->health < other->maxHealth) {
-			float distSq = (go->pos - other->pos).LengthSquared();
-			if (distSq < nearestDistSq) { nearestDistSq = distSq; go->targetAlly = other; }
+		if (other->teamID != go->teamID) continue;
+
+		float distSq = (go->pos - other->pos).LengthSquared();
+
+		// Priority 1: Injured Unit (Any type except Queen/Egg ideally, but here all)
+		if (other->health < other->maxHealth) {
+			if (distSq < nearestDistSq) {
+				nearestDistSq = distSq;
+				go->targetAlly = other;
+			}
 		}
+
+		// Priority 2: Healthy Soldier/Tank (To follow)
+		if (other->type == GameObject::GO_SOLDIER || other->type == GameObject::GO_TANK) {
+			if (distSq < nearestSoldierDist) {
+				nearestSoldierDist = distSq;
+				nearestSoldier = other;
+			}
+		}
+	}
+
+	// If no one needs healing, follow the nearest soldier
+	if (go->targetAlly == nullptr && nearestSoldier != nullptr) {
+		go->targetAlly = nearestSoldier;
 	}
 }
 
@@ -763,6 +775,7 @@ bool SceneSandbox::Handle(Message* message) {
 	// --- FIX: REDUCED PANIC RADIUS ---
 	MessageEnemySpotted* msgEnemy = dynamic_cast<MessageEnemySpotted*>(message);
 	if (msgEnemy) {
+		m_coloniesDetected = true;
 		for (size_t i = 0; i < m_goList.size(); ++i) {
 			GameObject* go = m_goList[i];
 			if (!go->active || go->teamID != msgEnemy->teamID) continue;
@@ -812,31 +825,32 @@ void SceneSandbox::RenderGO(GameObject* go)
 	switch (go->type)
 	{
 	case GameObject::GO_WORKER:
-		if (go->teamID == 0) RenderMesh(meshList[GEO_SPEEDY_ANT_WORKER], false);
-		else RenderMesh(meshList[GEO_STRONG_ANT_WORKER], false);
+		if (go->teamID == 0) RenderMesh(meshList[GEO_WORKER_RED], false);
+		else RenderMesh(meshList[GEO_WORKER_BLUE], false);
 		break;
 	case GameObject::GO_SOLDIER:
-		if (go->teamID == 0) RenderMesh(meshList[GEO_SPEEDY_ANT_SOLDIER], false);
-		else RenderMesh(meshList[GEO_STRONG_ANT_SOLDIER], false);
+		if (go->teamID == 0) RenderMesh(meshList[GEO_SOLDIER_RED], false);
+		else RenderMesh(meshList[GEO_SOLDIER_BLUE ], false);
 		break;
 	case GameObject::GO_QUEEN:
-		if (go->teamID == 0) RenderMesh(meshList[GEO_SPEEDY_ANT_QUEEN], false);
-		else RenderMesh(meshList[GEO_STRONG_ANT_QUEEN], false);
+		if (go->teamID == 0) RenderMesh(meshList[GEO_QUEEN_RED], false);
+		else RenderMesh(meshList[GEO_QUEEN_BLUE], false);
 		break;
 	case GameObject::GO_HEALER:
-		modelStack.Scale(0.8f, 0.8f, 1.f);
-		meshList[GEO_WHITEQUAD]->material.kAmbient.Set(0.2f, 1.0f, 0.2f); // Green
-		RenderMesh(meshList[GEO_WHITEQUAD], true);
+		if (go->teamID == 0)
+		RenderMesh(meshList[GEO_HEALER_RED], false);
+		else RenderMesh(meshList[GEO_HEALER_BLUE], false);
 		break;
 	case GameObject::GO_SCOUT:
-		modelStack.Scale(0.6f, 0.6f, 1.f);
-		meshList[GEO_WHITEQUAD]->material.kAmbient.Set(1.0f, 1.0f, 0.0f); // Yellow
-		RenderMesh(meshList[GEO_WHITEQUAD], true);
+		if (go->teamID == 0)
+			RenderMesh(meshList[GEO_SCOUT_RED], false);
+		else RenderMesh(meshList[GEO_SCOUT_BLUE], false);
 		break;
 	case GameObject::GO_TANK:
 		modelStack.Scale(1.2f, 1.2f, 1.f);
-		meshList[GEO_WHITEQUAD]->material.kAmbient.Set(0.5f, 0.5f, 0.5f); // Grey
-		RenderMesh(meshList[GEO_WHITEQUAD], true);
+		if (go->teamID == 0)
+			RenderMesh(meshList[GEO_TANK_RED], false);
+		else RenderMesh(meshList[GEO_TANK_BLUE], false);
 		break;
 	case GameObject::GO_FOOD:
 		RenderMesh(meshList[GEO_FOOD], false);
@@ -866,7 +880,7 @@ void SceneSandbox::RenderGO(GameObject* go)
 		modelStack.PushMatrix();
 		modelStack.Translate(0.f, 0.f, 0.f);
 		modelStack.Scale(m_gridSize, m_gridSize, 1.f); // Scale text to grid size
-		RenderText(meshList[GEO_TEXT], ss.str(), Color(1, 1, 1)); // White text
+		RenderText(meshList[GEO_TEXT], ss.str(), Color(0, 0, 0));
 		modelStack.PopMatrix();
 	}
 
@@ -912,25 +926,6 @@ void SceneSandbox::Render()
 				modelStack.PopMatrix();
 			}
 		}
-	}
-	meshList[GEO_WHITEQUAD]->material.kAmbient.Set(0.5f, 0.5f, 0.5f);
-	// Render grid lines (light)
-	for (int i = 0; i <= m_noGrid; ++i)
-	{
-		// Vertical Lines
-		modelStack.PushMatrix();
-		modelStack.Translate(i * m_gridSize, m_worldHeight * 0.5f, -0.5f);
-		modelStack.Scale(0.05f, m_worldHeight, 1.f);
-		RenderMesh(meshList[GEO_WHITEQUAD], true);
-		modelStack.PopMatrix();
-
-		// Horizontal Lines
-		// FIXED: Scale based on m_worldHeight (not Width) to keep it a perfect square
-		modelStack.PushMatrix();
-		modelStack.Translate(m_worldHeight * 0.5f, i * m_gridSize, -0.5f);
-		modelStack.Scale(m_worldHeight, 0.05f, 1.f);
-		RenderMesh(meshList[GEO_WHITEQUAD], true);
-		modelStack.PopMatrix();
 	}
 
 	// Render territory markers
@@ -1049,38 +1044,38 @@ void SceneSandbox::Render()
 	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.3f, 0.3f), 2.5f, colX, 45);
 
 	ss.str(""); ss << "Workers: " << m_redWorkerCount;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.6f, 0.6f), 2.0f, colX, 42);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.3f, 0.3f), 2.0f, colX, 42);
 	ss.str(""); ss << "Soldiers: " << m_redSoldierCount;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.6f, 0.6f), 2.0f, colX, 40);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.3f, 0.3f), 2.0f, colX, 40);
 	ss.str(""); ss << "Healers: " << m_redHealerCount;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.6f, 0.6f), 2.0f, colX, 38);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.3f, 0.3f), 2.0f, colX, 38);
 	ss.str(""); ss << "Scouts:  " << m_redScoutCount;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.6f, 0.6f), 2.0f, colX, 36);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.3f, 0.3f), 2.0f, colX, 36);
 	ss.str(""); ss << "Tanks:   " << m_redTankCount;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.6f, 0.6f), 2.0f, colX, 34);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.3f, 0.3f), 2.0f, colX, 34);
 	ss.str(""); ss << "Food:    " << m_redResources;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.6f, 0.6f), 2.0f, colX, 32);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.3f, 0.3f), 2.0f, colX, 32);
 	ss.str(""); ss << "Queen HP:" << (m_redQueen->active ? (int)m_redQueen->health : 0);
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.6f, 0.6f), 2.0f, colX, 30);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(1, 0.3f, 0.3f), 2.0f, colX, 30);
 
 	// --- BLUE ANT COLONY (Team 1) ---
 	ss.str(""); ss << "=== BLUE ANT COLONY ===";
 	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.3f, 0.3f, 1), 2.5f, colX, 25);
 
 	ss.str(""); ss << "Workers: " << m_blueWorkerCount;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.6f, 0.6f, 1), 2.0f, colX, 22);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.3f, 0.3f, 1), 2.0f, colX, 22);
 	ss.str(""); ss << "Soldiers: " << m_blueSoldierCount;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.6f, 0.6f, 1), 2.0f, colX, 20);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.3f, 0.3f, 1), 2.0f, colX, 20);
 	ss.str(""); ss << "Healers: " << m_blueHealerCount;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.6f, 0.6f, 1), 2.0f, colX, 18);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.3f, 0.3f, 1), 2.0f, colX, 18);
 	ss.str(""); ss << "Scouts:  " << m_blueScoutCount;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.6f, 0.6f, 1), 2.0f, colX, 16);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.3f, 0.3f, 1), 2.0f, colX, 16);
 	ss.str(""); ss << "Tanks:   " << m_blueTankCount;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.6f, 0.6f, 1), 2.0f, colX, 14);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.3f, 0.3f, 1), 2.0f, colX, 14);
 	ss.str(""); ss << "Food:    " << m_blueResources;
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.6f, 0.6f, 1), 2.0f, colX, 12);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.3f, 0.3f, 1), 2.0f, colX, 12);
 	ss.str(""); ss << "Queen HP:" << (m_blueQueen->active ? (int)m_blueQueen->health : 0);
-	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.6f, 0.6f, 1), 2.0f, colX, 10);
+	RenderTextOnScreen(meshList[GEO_TEXT], ss.str(), Color(0.3f, 0.3f, 1), 2.0f, colX, 10);
 
 	if (m_simulationEnded)
 	{

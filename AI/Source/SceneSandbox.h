@@ -69,7 +69,6 @@ protected:
 
 	// Food resources
 	std::vector<Vector3> m_foodLocations;
-	float m_foodSpawnTimer;
 
 	// Simulation state
 	float m_simulationTime;
@@ -79,5 +78,6 @@ protected:
 	// Performance optimization
 	float m_updateTimer;
 	int m_updateCycle;
+	bool m_coloniesDetected;
 };
 
